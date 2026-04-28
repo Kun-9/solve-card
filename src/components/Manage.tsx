@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Question, QuestionBank, Round } from "../types";
+import type { Difficulty, Question, QuestionBank, Round } from "../types";
+
+const DIFFICULTY_OPTIONS: { value: Difficulty | undefined; label: string }[] = [
+  { value: undefined, label: "없음" },
+  { value: 0, label: "하" },
+  { value: 1, label: "중" },
+  { value: 2, label: "상" },
+];
 import {
   ensureAllRounds,
   exportBankToFile,
@@ -484,6 +491,25 @@ function QuestionEditor({
         imageUrl={question.imageUrl}
         onChange={(url) => onPatch({ imageUrl: url })}
       />
+
+      <div className="field">
+        <label className="field-label">난이도 (선택 · 0=하, 1=중, 2=상)</label>
+        <div className="chip-row" role="radiogroup" aria-label="문제 난이도">
+          {DIFFICULTY_OPTIONS.map((opt) => (
+            <button
+              key={opt.label}
+              type="button"
+              className="btn-pill"
+              role="radio"
+              aria-checked={question.difficulty === opt.value}
+              aria-pressed={question.difficulty === opt.value}
+              onClick={() => onPatch({ difficulty: opt.value })}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="field">
         <label className="field-label">해설 (선택)</label>

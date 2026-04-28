@@ -1,9 +1,17 @@
-import type { QuestionBank, Round, RoundResult, ScoreHistory } from "../types";
+import type {
+  QuestionBank,
+  Round,
+  RoundResult,
+  ScoreHistory,
+  SubjectMeta,
+} from "../types";
 import { SEED_BANK } from "./seed";
 
-const BANK_KEY = "solve-card:bank:v1";
 const HISTORY_KEY = "solve-card:history:v1";
-const REMOTE_VERSION_KEY = "solve-card:bank:remoteVersion";
+const MANIFEST_KEY = "solve-card:manifest:v3";
+const ROUND_KEY_PREFIX = "solve-card:round:v3:";
+const USER_VERSION = "user-modified";
+const SEED_VERSION = "seed";
 const INDEX_URL = `${import.meta.env.BASE_URL}data/index.json`;
 const roundUrl = (id: string) =>
   `${import.meta.env.BASE_URL}data/rounds/${id}.json`;
@@ -11,16 +19,25 @@ const roundUrl = (id: string) =>
 interface ManifestEntry {
   id: string;
   category?: string;
-  title?: string;
+  title: string;
   description?: string;
-  questionCount?: number;
+  questionCount: number;
+  version?: string;
 }
 interface Manifest {
   rounds: ManifestEntry[];
+  subjects?: SubjectMeta[];
   updatedAt?: string;
 }
 
+interface CachedRound {
+  round: Round;
+  version: string;
+}
+
 const isBrowser = typeof window !== "undefined" && !!window.localStorage;
+
+let currentManifest: Manifest | null = null;
 
 function safeParse<T>(raw: string | null): T | null {
   if (!raw) return null;
@@ -31,69 +48,201 @@ function safeParse<T>(raw: string | null): T | null {
   }
 }
 
-function readStoredBank(): QuestionBank | null {
+function readManifestCache(): Manifest | null {
   if (!isBrowser) return null;
-  const stored = safeParse<QuestionBank>(localStorage.getItem(BANK_KEY));
-  if (stored && Array.isArray(stored.rounds)) return stored;
-  return null;
+  return safeParse<Manifest>(localStorage.getItem(MANIFEST_KEY));
 }
 
-async function fetchRemoteBank(): Promise<QuestionBank | null> {
-  const indexRes = await fetch(INDEX_URL, { cache: "no-store" });
-  if (!indexRes.ok) return null;
-  const manifest = (await indexRes.json()) as Manifest;
-  if (!manifest || !Array.isArray(manifest.rounds) || manifest.rounds.length === 0) {
-    return null;
+function writeManifestCache(manifest: Manifest): void {
+  if (!isBrowser) return;
+  localStorage.setItem(MANIFEST_KEY, JSON.stringify(manifest));
+}
+
+function clearAllRoundCaches(): void {
+  if (!isBrowser) return;
+  const keys: string[] = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(ROUND_KEY_PREFIX)) keys.push(key);
   }
+  keys.forEach((k) => localStorage.removeItem(k));
+}
 
-  const rounds = await Promise.all(
-    manifest.rounds.map(async (entry) => {
-      const res = await fetch(roundUrl(entry.id), { cache: "no-store" });
-      if (!res.ok) throw new Error(`round fetch failed: ${entry.id} (${res.status})`);
-      return (await res.json()) as Round;
-    }),
+function readRoundCache(id: string): CachedRound | null {
+  if (!isBrowser) return null;
+  return safeParse<CachedRound>(
+    localStorage.getItem(`${ROUND_KEY_PREFIX}${id}`),
   );
+}
 
+function writeRoundCache(id: string, round: Round, version: string): void {
+  if (!isBrowser) return;
+  localStorage.setItem(
+    `${ROUND_KEY_PREFIX}${id}`,
+    JSON.stringify({ round, version }),
+  );
+}
+
+function metaBankFromManifest(manifest: Manifest): QuestionBank {
   return {
-    rounds,
+    rounds: manifest.rounds.map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      description: entry.description,
+      questions: [],
+      questionCount: entry.questionCount,
+    })),
+    subjects: manifest.subjects,
     updatedAt: manifest.updatedAt ?? "",
   };
+}
+
+function manifestFromBank(bank: QuestionBank, version: string): Manifest {
+  return {
+    rounds: bank.rounds.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      questionCount: r.questionCount ?? r.questions.length,
+      version,
+    })),
+    subjects: bank.subjects,
+    updatedAt: bank.updatedAt || version,
+  };
+}
+
+async function fetchManifest(): Promise<Manifest | null> {
+  try {
+    const res = await fetch(INDEX_URL, { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = (await res.json()) as Manifest;
+    if (!data || !Array.isArray(data.rounds)) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchRound(id: string): Promise<Round | null> {
+  try {
+    const res = await fetch(roundUrl(id), { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as Round;
+  } catch {
+    return null;
+  }
 }
 
 export async function loadBankAsync(): Promise<QuestionBank> {
   if (!isBrowser) return SEED_BANK;
 
-  const stored = readStoredBank();
-  const storedRemoteVersion = localStorage.getItem(REMOTE_VERSION_KEY);
+  const cached = readManifestCache();
 
-  try {
-    const remote = await fetchRemoteBank();
-    if (remote && remote.rounds.length > 0) {
-      const remoteVersion = remote.updatedAt ?? "";
-      if (!stored || storedRemoteVersion !== remoteVersion) {
-        localStorage.setItem(BANK_KEY, JSON.stringify(remote));
-        localStorage.setItem(REMOTE_VERSION_KEY, remoteVersion);
-        return remote;
-      }
-      return stored;
-    }
-  } catch {
-    // 오프라인 또는 fetch 실패 — 폴백
+  // 사용자가 직접 편집한 manifest는 원격으로 덮지 않음
+  if (cached && cached.updatedAt === USER_VERSION) {
+    currentManifest = cached;
+    return metaBankFromManifest(cached);
   }
 
-  if (stored) return stored;
+  const remote = await fetchManifest();
+  if (remote) {
+    if (!cached || cached.updatedAt !== remote.updatedAt) {
+      writeManifestCache(remote);
+    }
+    currentManifest = remote;
+    return metaBankFromManifest(remote);
+  }
 
-  // 마지막 폴백: 내장 시드
-  localStorage.setItem(BANK_KEY, JSON.stringify(SEED_BANK));
-  return SEED_BANK;
+  if (cached) {
+    currentManifest = cached;
+    return metaBankFromManifest(cached);
+  }
+
+  // 마지막 폴백: 내장 시드 — 회차 캐시까지 채워두면 ensureRound가 즉시 반환
+  const seedManifest = manifestFromBank(SEED_BANK, SEED_VERSION);
+  for (const round of SEED_BANK.rounds) {
+    writeRoundCache(round.id, round, SEED_VERSION);
+  }
+  writeManifestCache(seedManifest);
+  currentManifest = seedManifest;
+  return metaBankFromManifest(seedManifest);
+}
+
+export async function ensureRound(id: string): Promise<Round | null> {
+  if (!isBrowser) {
+    return SEED_BANK.rounds.find((r) => r.id === id) ?? null;
+  }
+  const entry = currentManifest?.rounds.find((r) => r.id === id);
+  const expectedVersion = entry?.version ?? "";
+
+  const cached = readRoundCache(id);
+  if (cached && cached.round) {
+    // 사용자 편집본이거나 버전 일치 시 캐시 사용
+    if (
+      cached.version === USER_VERSION ||
+      !expectedVersion ||
+      cached.version === expectedVersion
+    ) {
+      return cached.round;
+    }
+  }
+
+  const remote = await fetchRound(id);
+  if (remote) {
+    writeRoundCache(id, remote, expectedVersion || "");
+    return remote;
+  }
+  return cached?.round ?? null;
+}
+
+export async function ensureAllRounds(): Promise<QuestionBank> {
+  if (!isBrowser) return SEED_BANK;
+  if (!currentManifest) {
+    await loadBankAsync();
+  }
+  const meta = currentManifest;
+  if (!meta) return SEED_BANK;
+
+  const rounds = await Promise.all(
+    meta.rounds.map(async (entry) => {
+      const r = await ensureRound(entry.id);
+      return (
+        r ??
+        ({
+          id: entry.id,
+          title: entry.title,
+          description: entry.description,
+          questions: [],
+          questionCount: entry.questionCount,
+        } as Round)
+      );
+    }),
+  );
+  return {
+    rounds,
+    subjects: meta.subjects,
+    updatedAt: meta.updatedAt ?? "",
+  };
 }
 
 export function saveBank(bank: QuestionBank): void {
   if (!isBrowser) return;
-  const next: QuestionBank = { ...bank, updatedAt: new Date().toISOString() };
-  localStorage.setItem(BANK_KEY, JSON.stringify(next));
-  // 사용자가 직접 수정한 이후엔 원격 버전 동기화를 멈춥니다.
-  localStorage.setItem(REMOTE_VERSION_KEY, "user-modified");
+  for (const round of bank.rounds) {
+    writeRoundCache(round.id, round, USER_VERSION);
+  }
+  const manifest: Manifest = {
+    rounds: bank.rounds.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      questionCount: r.questionCount ?? r.questions.length,
+      version: USER_VERSION,
+    })),
+    subjects: bank.subjects,
+    updatedAt: USER_VERSION,
+  };
+  writeManifestCache(manifest);
+  currentManifest = manifest;
 }
 
 export interface SaveToFileResult {
@@ -102,8 +251,7 @@ export interface SaveToFileResult {
 }
 
 /**
- * dev 서버 한정: public/data/cbt.json 파일을 직접 갱신한다.
- * prod 빌드에선 동작하지 않는다.
+ * dev 서버 한정: public/data/index.json + public/data/rounds/*.json을 직접 갱신한다.
  */
 export async function saveBankToFile(
   bank: QuestionBank,
@@ -126,10 +274,6 @@ export async function saveBankToFile(
     if (!res.ok || !body.ok) {
       return { ok: false, error: body.error ?? `HTTP ${res.status}` };
     }
-    // 원격 캐시(BASE_URL/data/cbt.json) 헬퍼와 충돌하지 않도록 표시 갱신
-    if (next.updatedAt) {
-      localStorage.setItem(REMOTE_VERSION_KEY, next.updatedAt);
-    }
     return { ok: true };
   } catch (err) {
     return {
@@ -141,16 +285,23 @@ export async function saveBankToFile(
 
 export async function resyncRemoteBank(): Promise<QuestionBank> {
   if (isBrowser) {
-    localStorage.removeItem(BANK_KEY);
-    localStorage.removeItem(REMOTE_VERSION_KEY);
+    localStorage.removeItem(MANIFEST_KEY);
+    clearAllRoundCaches();
+    currentManifest = null;
   }
   return loadBankAsync();
 }
 
 export function resetToSeed(): QuestionBank {
   if (isBrowser) {
-    localStorage.setItem(BANK_KEY, JSON.stringify(SEED_BANK));
-    localStorage.setItem(REMOTE_VERSION_KEY, "user-modified");
+    clearAllRoundCaches();
+    for (const round of SEED_BANK.rounds) {
+      writeRoundCache(round.id, round, SEED_VERSION);
+    }
+    const manifest = manifestFromBank(SEED_BANK, SEED_VERSION);
+    manifest.updatedAt = USER_VERSION;
+    writeManifestCache(manifest);
+    currentManifest = manifest;
   }
   return SEED_BANK;
 }

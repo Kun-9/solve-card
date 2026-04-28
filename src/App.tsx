@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { QuestionBank, Round, RoundResult } from "./types";
-import { appendResult, loadBankAsync, loadHistory, saveBank } from "./data/storage";
+import {
+  appendResult,
+  ensureAllRounds,
+  ensureRound,
+  loadBankAsync,
+  loadHistory,
+  saveBank,
+} from "./data/storage";
 import { Home } from "./components/Home";
 import { Quiz } from "./components/Quiz";
 import { Result } from "./components/Result";
@@ -78,20 +85,22 @@ export function App() {
     setRoute({ name: "manage" });
   }, [requestExitQuiz]);
 
-  const startRound = useCallback((round: Round, shuffled = false) => {
-    if (round.questions.length === 0) return;
-    const questions = shuffled ? shuffle(round.questions) : round.questions;
+  const startRound = useCallback(async (meta: Round, shuffled = false) => {
+    const full = await ensureRound(meta.id);
+    if (!full || full.questions.length === 0) return;
+    const questions = shuffled ? shuffle(full.questions) : full.questions;
     setRoute({
       name: "quiz",
-      round: { ...round, questions },
+      round: { ...full, questions },
       mode: shuffled ? "random" : "ordered",
-      sourceLabel: shuffled ? `${round.title} · 셔플` : round.title,
+      sourceLabel: shuffled ? `${full.title} · 셔플` : full.title,
     });
   }, []);
 
   const startRandom = useCallback(
-    (subjectKey?: string) => {
-      const all = bank.rounds.flatMap((r) => r.questions);
+    async (subjectKey?: string) => {
+      const full = await ensureAllRounds();
+      const all = full.rounds.flatMap((r) => r.questions);
       const pool = subjectKey
         ? all.filter((q) => q.section?.startsWith(subjectKey))
         : all;
@@ -109,7 +118,7 @@ export function App() {
       };
       setRoute({ name: "quiz", round, mode: "random", sourceLabel: label });
     },
-    [bank],
+    [],
   );
 
   const finishQuiz = useCallback((result: RoundResult) => {
@@ -118,18 +127,22 @@ export function App() {
     setRoute({ name: "result", result });
   }, []);
 
-  const retry = useCallback(() => {
+  const retry = useCallback(async () => {
     if (route.name !== "result") return;
     const sourceRound = bank.rounds.find((r) => r.id === route.result.roundId);
     if (sourceRound) {
-      startRound(sourceRound);
+      await startRound(sourceRound);
     } else {
-      startRandom();
+      await startRandom();
     }
   }, [route, bank, startRound, startRandom]);
 
   const totalQuestions = useMemo(
-    () => bank.rounds.reduce((sum, r) => sum + r.questions.length, 0),
+    () =>
+      bank.rounds.reduce(
+        (sum, r) => sum + (r.questionCount ?? r.questions.length),
+        0,
+      ),
     [bank],
   );
 

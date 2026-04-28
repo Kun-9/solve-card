@@ -84,6 +84,41 @@ function categoryFromRoundId(id: string): string {
   return m ? m[1] : "rd";
 }
 
+function hashRoundPayload(payload: unknown): string {
+  return crypto
+    .createHash("sha1")
+    .update(JSON.stringify(payload))
+    .digest("hex")
+    .slice(0, 12);
+}
+
+const SUBJECT_RE = /^(\d+과목)/;
+
+interface SubjectAgg {
+  key: string;
+  fullLabel: string;
+  count: number;
+}
+
+function aggregateSubjects(
+  payloads: Array<{ questions: Array<{ section?: unknown }> }>,
+): SubjectAgg[] {
+  const map = new Map<string, SubjectAgg>();
+  for (const p of payloads) {
+    for (const q of p.questions) {
+      const section = typeof q?.section === "string" ? q.section : "";
+      if (!section) continue;
+      const m = section.match(SUBJECT_RE);
+      if (!m) continue;
+      const key = m[1];
+      const entry = map.get(key) ?? { key, fullLabel: section, count: 0 };
+      entry.count += 1;
+      map.set(key, entry);
+    }
+  }
+  return [...map.values()].sort((a, b) => a.key.localeCompare(b.key, "ko"));
+}
+
 async function externalizeBank(bank: MaybeBank): Promise<void> {
   if (!bank || !Array.isArray(bank.rounds)) return;
   for (const round of bank.rounds) {
@@ -121,7 +156,9 @@ async function writeBankSplit(bank: MaybeBank): Promise<void> {
     title?: string;
     description?: string;
     questionCount: number;
+    version: string;
   }> = [];
+  const payloads: Array<{ questions: Array<{ section?: unknown }> }> = [];
 
   for (const round of rounds) {
     if (!round) continue;
@@ -145,7 +182,9 @@ async function writeBankSplit(bank: MaybeBank): Promise<void> {
       title,
       description,
       questionCount: questions.length,
+      version: hashRoundPayload(payload),
     });
+    payloads.push({ questions: questions as Array<{ section?: unknown }> });
   }
 
   // 새 bank에 없는 회차 파일은 정리
@@ -164,7 +203,11 @@ async function writeBankSplit(bank: MaybeBank): Promise<void> {
     typeof bank.updatedAt === "string" && bank.updatedAt
       ? bank.updatedAt
       : new Date().toISOString();
-  const manifest = { rounds: manifestEntries, updatedAt };
+  const manifest = {
+    rounds: manifestEntries,
+    subjects: aggregateSubjects(payloads),
+    updatedAt,
+  };
   await fs.mkdir(path.dirname(INDEX_FILE), { recursive: true });
   await fs.writeFile(
     INDEX_FILE,

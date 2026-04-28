@@ -55,6 +55,9 @@ export function Home({
   const [shuffled, setShuffled] = useState(false);
 
   const subjects = useMemo(() => {
+    if (bank.subjects && bank.subjects.length > 0) {
+      return bank.subjects.map((s) => ({ key: s.key, fullLabel: s.fullLabel }));
+    }
     const map = new Map<string, string>();
     bank.rounds.forEach((r) => {
       r.questions.forEach((q) => {
@@ -79,6 +82,9 @@ export function Home({
 
   const subjectCount = useMemo(() => {
     if (subjectFilter === ALL) return totalQuestions;
+    if (bank.subjects) {
+      return bank.subjects.find((s) => s.key === subjectFilter)?.count ?? 0;
+    }
     let n = 0;
     bank.rounds.forEach((r) => {
       r.questions.forEach((q) => {
@@ -244,7 +250,8 @@ function RoundCard({ round, history, dateLabel, onStart }: RoundCardProps) {
     const rate = r.total === 0 ? 0 : Math.round((r.correct / r.total) * 100);
     return acc === null || rate > acc ? rate : acc;
   }, null);
-  const disabled = round.questions.length === 0;
+  const count = round.questionCount ?? round.questions.length;
+  const disabled = count === 0;
 
   return (
     <button
@@ -260,9 +267,7 @@ function RoundCard({ round, history, dateLabel, onStart }: RoundCardProps) {
         <h3 className="h-card">{round.title}</h3>
         <div className="row row-between" style={{ marginTop: 4 }}>
           <span className="caption">
-            {recent
-              ? `최근 ${recent.correct}/${recent.total}`
-              : `${round.questions.length}문제`}
+            {recent ? `최근 ${recent.correct}/${recent.total}` : `${count}문제`}
           </span>
           <span className="caption">
             {best !== null && best !== undefined ? `최고 ${best}%` : "미응시"}

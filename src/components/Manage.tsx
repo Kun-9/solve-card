@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Question, QuestionBank, Round } from "../types";
 import {
+  ensureAllRounds,
   exportBankToFile,
   importBankFromFile,
   resetToSeed,
@@ -17,17 +18,34 @@ interface ManageProps {
 }
 
 export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
-  const [draft, setDraft] = useState<QuestionBank>(bank);
-  const [activeId, setActiveId] = useState<string | null>(
-    bank.rounds[0]?.id ?? null,
-  );
+  const [draft, setDraft] = useState<QuestionBank>({
+    rounds: [],
+    updatedAt: bank.updatedAt ?? "",
+  });
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [savedMsg, setSavedMsg] = useState<string>("");
   const [importMsg, setImportMsg] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // 외부에서 bank가 바뀌면(저장/import/resync 등) draft도 갱신
+  // 외부에서 bank가 바뀔 때(import/reset/resync) 본문 포함 풀 데이터를 보장한다.
   useEffect(() => {
-    setDraft(bank);
+    let cancelled = false;
+    setLoading(true);
+    ensureAllRounds()
+      .then((full) => {
+        if (cancelled) return;
+        setDraft(full);
+        setActiveId((prev) => prev ?? full.rounds[0]?.id ?? null);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [bank]);
 
   const activeRound = useMemo(
@@ -166,6 +184,14 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
     } catch (err) {
       setImportMsg(err instanceof Error ? err.message : "동기화 실패");
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="stack-xl stack">
+        <div className="card empty">문제 데이터를 준비 중…</div>
+      </div>
+    );
   }
 
   return (

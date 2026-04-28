@@ -4,6 +4,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,6 +43,32 @@ function parseDateFromRoundId(roundId) {
 function categoryFromRoundId(roundId) {
   const m = roundId.match(/^([a-z]+)/);
   return m ? m[1] : "rd";
+}
+
+function hashRoundPayload(round) {
+  return crypto
+    .createHash("sha1")
+    .update(JSON.stringify(round))
+    .digest("hex")
+    .slice(0, 12);
+}
+
+const SUBJECT_RE = /^(\d+과목)/;
+
+function aggregateSubjects(rounds) {
+  const map = new Map();
+  for (const r of rounds) {
+    for (const q of r.questions) {
+      if (!q.section) continue;
+      const m = q.section.match(SUBJECT_RE);
+      if (!m) continue;
+      const key = m[1];
+      const entry = map.get(key) ?? { key, fullLabel: q.section, count: 0 };
+      entry.count += 1;
+      map.set(key, entry);
+    }
+  }
+  return [...map.values()].sort((a, b) => a.key.localeCompare(b.key, "ko"));
 }
 
 function pickExplanation(explanations) {
@@ -173,9 +200,11 @@ function main() {
   const updatedAt = new Date().toISOString();
 
   fs.mkdirSync(ROUNDS_DIR, { recursive: true });
+  const versions = new Map();
   for (const round of rounds) {
     const file = path.join(ROUNDS_DIR, `${round.id}.json`);
     fs.writeFileSync(file, JSON.stringify(round));
+    versions.set(round.id, hashRoundPayload(round));
   }
 
   const manifest = {
@@ -185,7 +214,9 @@ function main() {
       title: r.title,
       description: r.description,
       questionCount: r.questions.length,
+      version: versions.get(r.id),
     })),
+    subjects: aggregateSubjects(rounds),
     updatedAt,
   };
   fs.mkdirSync(path.dirname(INDEX_FILE), { recursive: true });

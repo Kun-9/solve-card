@@ -32,11 +32,21 @@ export interface Round {
   title: string;
   description?: string;
   questions: Question[];
+  /** 메타-only(lazy) 모드에서 questions가 비어 있어도 카운트를 표시할 수 있도록 함. */
+  questionCount?: number;
+}
+
+export interface SubjectMeta {
+  key: string;
+  fullLabel: string;
+  count: number;
 }
 
 export interface QuestionBank {
   rounds: Round[];
   updatedAt: string;
+  /** 메타 모드에서 Home 등이 본문 없이 과목 칩을 그릴 수 있도록 미리 집계한 값. */
+  subjects?: SubjectMeta[];
 }
 
 export interface AnswerLog {

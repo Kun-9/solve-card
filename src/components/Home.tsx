@@ -77,6 +77,18 @@ export function Home({
     );
   }, [bank, dateMap, yearFilter]);
 
+  const subjectCount = useMemo(() => {
+    if (subjectFilter === ALL) return totalQuestions;
+    let n = 0;
+    bank.rounds.forEach((r) => {
+      r.questions.forEach((q) => {
+        const m = q.section?.match(SUBJECT_RE);
+        if (m && m[1] === subjectFilter) n += 1;
+      });
+    });
+    return n;
+  }, [bank, subjectFilter, totalQuestions]);
+
   return (
     <div className="stack-xl stack">
       <section className="stack" style={{ gap: 16 }}>
@@ -114,18 +126,30 @@ export function Home({
           </div>
         )}
 
-        <div className="row" style={{ marginTop: 2 }}>
-          <button
-            type="button"
-            className="btn btn-primary btn-lg"
-            onClick={() =>
-              onStartRandom(subjectFilter === ALL ? undefined : subjectFilter)
-            }
-            disabled={!hasContent}
-          >
-            {subjectFilter === ALL ? "전체 랜덤" : `${subjectFilter} 랜덤`}
-          </button>
-        </div>
+        <button
+          type="button"
+          className="random-card"
+          onClick={() =>
+            onStartRandom(subjectFilter === ALL ? undefined : subjectFilter)
+          }
+          disabled={!hasContent}
+        >
+          <span className="random-card-meta">
+            <span className="random-card-eyebrow">Shuffle &amp; Play</span>
+            <span className="random-card-title">
+              {subjectFilter === ALL ? "전체 랜덤" : `${subjectFilter} 랜덤`}
+            </span>
+            <span className="random-card-sub">
+              {subjectCount}문제 중 무작위 출제
+            </span>
+          </span>
+          <span className="random-card-dice" aria-hidden>
+            <span />
+            <span />
+            <span />
+            <span />
+          </span>
+        </button>
       </section>
 
       <section className="stack">
@@ -196,7 +220,6 @@ export function Home({
                 round={round}
                 history={history}
                 dateLabel={dateMap.get(round.id) ?? null}
-                shuffled={shuffled}
                 onStart={(r) => onStartRound(r, shuffled)}
               />
             ))}
@@ -211,11 +234,10 @@ interface RoundCardProps {
   round: Round;
   history: ScoreHistory;
   dateLabel: string | null;
-  shuffled: boolean;
   onStart: (round: Round) => void;
 }
 
-function RoundCard({ round, history, dateLabel, shuffled, onStart }: RoundCardProps) {
+function RoundCard({ round, history, dateLabel, onStart }: RoundCardProps) {
   const log = history[round.id];
   const recent = log?.[0];
   const best = log?.reduce<number | null>((acc, r) => {
@@ -234,7 +256,6 @@ function RoundCard({ round, history, dateLabel, shuffled, onStart }: RoundCardPr
       <div className="stack" style={{ gap: 14 }}>
         <div className="row row-between" style={{ alignItems: "center" }}>
           <span className="caption">{dateLabel ?? round.id}</span>
-          {shuffled && <span className="tag tag-shuffle">셔플</span>}
         </div>
         <h3 className="h-card">{round.title}</h3>
         <div className="row row-between" style={{ marginTop: 4 }}>
@@ -244,7 +265,7 @@ function RoundCard({ round, history, dateLabel, shuffled, onStart }: RoundCardPr
               : `${round.questions.length}문제`}
           </span>
           <span className="caption">
-            {best !== null && best !== undefined ? `최고 ${best}%` : "안 품"}
+            {best !== null && best !== undefined ? `최고 ${best}%` : "미응시"}
           </span>
         </div>
       </div>

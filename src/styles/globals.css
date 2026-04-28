@@ -320,6 +320,157 @@ main {
 }
 
 /* ─────────────────────────────────────────────
+   Random shuffle hero card (Home CTA)
+   ───────────────────────────────────────────── */
+.random-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  text-align: left;
+  padding: 22px 24px;
+  border-radius: var(--r-container);
+  background:
+    radial-gradient(120% 100% at 100% 0%, rgba(247, 244, 237, 0.1), transparent 55%),
+    var(--charcoal);
+  color: var(--cream-soft);
+  border: 1px solid var(--charcoal);
+  box-shadow:
+    rgba(255, 255, 255, 0.18) 0 1px 0 0 inset,
+    rgba(0, 0, 0, 0.18) 0 10px 26px -14px,
+    rgba(0, 0, 0, 0.05) 0 1px 2px 0;
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 180ms ease, opacity 120ms ease;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.random-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(247, 244, 237, 0.07) 1px, transparent 1px);
+  background-size: 14px 14px;
+  background-position: 8px 8px;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(140deg, transparent 0%, black 55%, transparent 100%);
+  mask-image: linear-gradient(140deg, transparent 0%, black 55%, transparent 100%);
+  z-index: 0;
+}
+
+.random-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    rgba(255, 255, 255, 0.22) 0 1px 0 0 inset,
+    rgba(0, 0, 0, 0.24) 0 16px 32px -14px,
+    rgba(0, 0, 0, 0.06) 0 1px 2px 0;
+}
+
+.random-card:active:not(:disabled) {
+  transform: translateY(0);
+  opacity: 0.94;
+}
+
+.random-card:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.random-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.random-card-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(247, 244, 237, 0.55);
+  font-weight: 500;
+}
+
+.random-card-title {
+  font-size: 26px;
+  line-height: 1.05;
+  letter-spacing: -0.6px;
+  font-weight: 600;
+}
+
+.random-card-sub {
+  font-size: 13px;
+  color: rgba(247, 244, 237, 0.62);
+  font-variant-numeric: tabular-nums;
+}
+
+.random-card-dice {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--r-card);
+  background: rgba(247, 244, 237, 0.08);
+  border: 1px solid rgba(247, 244, 237, 0.14);
+  transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 220ms ease, border-color 220ms ease;
+  position: relative;
+  z-index: 1;
+}
+
+.random-card-dice > span {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--cream-soft);
+  align-self: center;
+  justify-self: center;
+}
+
+.random-card-dice > span:nth-child(1) { opacity: 0.95; }
+.random-card-dice > span:nth-child(2) { opacity: 0.55; }
+.random-card-dice > span:nth-child(3) { opacity: 0.55; }
+.random-card-dice > span:nth-child(4) { opacity: 0.95; }
+
+.random-card:hover:not(:disabled) .random-card-dice {
+  transform: rotate(-9deg) scale(1.04);
+  background: rgba(247, 244, 237, 0.12);
+  border-color: rgba(247, 244, 237, 0.2);
+}
+
+@media (max-width: 640px) {
+  .random-card {
+    padding: 18px 20px;
+    gap: 14px;
+    border-radius: var(--r-card);
+  }
+  .random-card-title {
+    font-size: 22px;
+  }
+  .random-card-eyebrow {
+    font-size: 10.5px;
+  }
+  .random-card-dice {
+    width: 48px;
+    height: 48px;
+    padding: 8px;
+    gap: 5px;
+  }
+  .random-card-dice > span {
+    width: 7px;
+    height: 7px;
+  }
+}
+
+/* ─────────────────────────────────────────────
    Cards
    ───────────────────────────────────────────── */
 .card {

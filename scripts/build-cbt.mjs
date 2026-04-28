@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// cbtbank/data/{iz,ic}*.json -> public/data/cbt.json
-// 회차(시험일) 단위 라운드로 합치고, image_path가 있으면 public/data/cbt-images/<roundId>/ 로 복사한다.
+// cbtbank/data/{iz,ic}*.json -> public/data/index.json + public/data/rounds/{id}.json
+// 회차(시험일) 단위로 회차별 파일을 출력하고, image_path가 있으면 public/data/cbt-images/<roundId>/ 로 복사한다.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -11,8 +11,10 @@ const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, "..");
 const SRC_DIR = path.join(ROOT, "cbtbank", "data");
 const PUBLIC_DIR = path.join(ROOT, "public", "data");
-const OUT_FILE = path.join(PUBLIC_DIR, "cbt.json");
+const INDEX_FILE = path.join(PUBLIC_DIR, "index.json");
+const ROUNDS_DIR = path.join(PUBLIC_DIR, "rounds");
 const IMG_OUT_DIR = path.join(PUBLIC_DIR, "cbt-images");
+const LEGACY_BANK_FILE = path.join(PUBLIC_DIR, "cbt.json");
 
 const FILES = [
   "iz20200606",
@@ -35,6 +37,11 @@ function parseDateFromRoundId(roundId) {
   const m = roundId.match(/^[a-z]+(\d{4})(\d{2})(\d{2})$/);
   if (!m) return roundId;
   return `${m[1]}-${m[2]}-${m[3]}`;
+}
+
+function categoryFromRoundId(roundId) {
+  const m = roundId.match(/^([a-z]+)/);
+  return m ? m[1] : "rd";
 }
 
 function pickExplanation(explanations) {
@@ -78,11 +85,9 @@ function convertFile(file) {
       (typeof q.correct_index === "number" ? q.correct_index : 1) - 1;
     const choices = q.choices.map((c) => String(c.text ?? "").trim());
     const id = q.question_id ?? `${data.round_id}-${q.question_num}`;
-    // 본문 이미지 — image_path가 있으면 항상 복사(기존 image_required 의존 제거)
     const imageUrl = q.image_path
       ? copyImage(data.round_id, q.image_path)
       : undefined;
-    // 보기 이미지 — choices[i].image_path가 있는 슬롯만 URL, 없으면 null
     const choiceImageUrls = q.choices.map((c) =>
       c && c.image_path ? copyImage(data.round_id, c.image_path) : null,
     );
@@ -113,11 +118,23 @@ function cleanImageOutput() {
   }
 }
 
+function cleanRoundsOutput() {
+  if (fs.existsSync(ROUNDS_DIR)) {
+    fs.rmSync(ROUNDS_DIR, { recursive: true, force: true });
+  }
+}
+
+function removeLegacyBundle() {
+  if (fs.existsSync(LEGACY_BANK_FILE)) {
+    fs.rmSync(LEGACY_BANK_FILE, { force: true });
+  }
+}
+
 function main() {
   if (!fs.existsSync(SRC_DIR)) {
-    if (fs.existsSync(OUT_FILE)) {
+    if (fs.existsSync(INDEX_FILE)) {
       console.log(
-        `[build-cbt] source directory not found, keeping existing ${path.relative(ROOT, OUT_FILE)}`,
+        `[build-cbt] source directory not found, keeping existing ${path.relative(ROOT, INDEX_FILE)}`,
       );
       return;
     }
@@ -128,11 +145,30 @@ function main() {
   }
 
   cleanImageOutput();
-  const rounds = FILES.map(convertFile);
-  const bank = { rounds, updatedAt: new Date().toISOString() };
+  cleanRoundsOutput();
+  removeLegacyBundle();
 
-  fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
-  fs.writeFileSync(OUT_FILE, JSON.stringify(bank));
+  const rounds = FILES.map(convertFile);
+  const updatedAt = new Date().toISOString();
+
+  fs.mkdirSync(ROUNDS_DIR, { recursive: true });
+  for (const round of rounds) {
+    const file = path.join(ROUNDS_DIR, `${round.id}.json`);
+    fs.writeFileSync(file, JSON.stringify(round));
+  }
+
+  const manifest = {
+    rounds: rounds.map((r) => ({
+      id: r.id,
+      category: categoryFromRoundId(r.id),
+      title: r.title,
+      description: r.description,
+      questionCount: r.questions.length,
+    })),
+    updatedAt,
+  };
+  fs.mkdirSync(path.dirname(INDEX_FILE), { recursive: true });
+  fs.writeFileSync(INDEX_FILE, JSON.stringify(manifest));
 
   const totalQuestions = rounds.reduce((sum, r) => sum + r.questions.length, 0);
   const totalImages = rounds.reduce(
@@ -149,9 +185,17 @@ function main() {
       ),
     0,
   );
-  const sizeKb = (fs.statSync(OUT_FILE).size / 1024).toFixed(1);
+  const indexKb = (fs.statSync(INDEX_FILE).size / 1024).toFixed(1);
+  const roundsKb = rounds
+    .reduce(
+      (sum, r) =>
+        sum +
+        fs.statSync(path.join(ROUNDS_DIR, `${r.id}.json`)).size / 1024,
+      0,
+    )
+    .toFixed(1);
   console.log(
-    `[build-cbt] wrote ${rounds.length} rounds · ${totalQuestions} questions · ${totalImages} body img · ${totalChoiceImages} choice img · ${sizeKb} KB → ${path.relative(ROOT, OUT_FILE)}`,
+    `[build-cbt] wrote ${rounds.length} rounds · ${totalQuestions} questions · ${totalImages} body img · ${totalChoiceImages} choice img · index ${indexKb} KB · rounds ${roundsKb} KB → ${path.relative(ROOT, PUBLIC_DIR)}`,
   );
 }
 

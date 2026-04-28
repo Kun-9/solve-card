@@ -7,8 +7,11 @@ import crypto from "node:crypto";
 const base = process.env.DEPLOY_BASE ?? "/";
 
 const PUBLIC_DIR = path.resolve(process.cwd(), "public");
-const BANK_FILE = path.join(PUBLIC_DIR, "data/cbt.json");
-const IMG_DIR = path.join(PUBLIC_DIR, "data/cbt-images");
+const PUBLIC_DATA = path.join(PUBLIC_DIR, "data");
+const INDEX_FILE = path.join(PUBLIC_DATA, "index.json");
+const ROUNDS_DIR = path.join(PUBLIC_DATA, "rounds");
+const LEGACY_BANK_FILE = path.join(PUBLIC_DATA, "cbt.json");
+const IMG_DIR = path.join(PUBLIC_DATA, "cbt-images");
 const MAX_BODY = 60 * 1024 * 1024;
 
 const DATAURL_RE = /^data:([^;,]+);base64,(.+)$/i;
@@ -62,14 +65,23 @@ async function externalizeDataUrl(
   return relPath;
 }
 
-interface MaybeBank {
-  rounds?: Array<{
-    id?: unknown;
-    questions?: Array<{
-      imageUrl?: unknown;
-      choiceImageUrls?: unknown;
-    }>;
+interface MaybeRound {
+  id?: unknown;
+  title?: unknown;
+  description?: unknown;
+  questions?: Array<{
+    imageUrl?: unknown;
+    choiceImageUrls?: unknown;
   }>;
+}
+interface MaybeBank {
+  rounds?: MaybeRound[];
+  updatedAt?: unknown;
+}
+
+function categoryFromRoundId(id: string): string {
+  const m = id.match(/^([a-z]+)/);
+  return m ? m[1] : "rd";
 }
 
 async function externalizeBank(bank: MaybeBank): Promise<void> {
@@ -97,6 +109,71 @@ async function externalizeBank(bank: MaybeBank): Promise<void> {
       }
     }
   }
+}
+
+async function writeBankSplit(bank: MaybeBank): Promise<void> {
+  await fs.mkdir(ROUNDS_DIR, { recursive: true });
+  const rounds = Array.isArray(bank.rounds) ? bank.rounds : [];
+  const validIds = new Set<string>();
+  const manifestEntries: Array<{
+    id: string;
+    category: string;
+    title?: string;
+    description?: string;
+    questionCount: number;
+  }> = [];
+
+  for (const round of rounds) {
+    if (!round) continue;
+    const safeId = safeRoundId(round.id);
+    validIds.add(safeId);
+    const title = typeof round.title === "string" ? round.title : "";
+    const description =
+      typeof round.description === "string" ? round.description : undefined;
+    const questions = Array.isArray(round.questions) ? round.questions : [];
+    const payload = {
+      id: safeId,
+      title,
+      description,
+      questions,
+    };
+    const file = path.join(ROUNDS_DIR, `${safeId}.json`);
+    await fs.writeFile(file, JSON.stringify(payload, null, 2) + "\n", "utf-8");
+    manifestEntries.push({
+      id: safeId,
+      category: categoryFromRoundId(safeId),
+      title,
+      description,
+      questionCount: questions.length,
+    });
+  }
+
+  // 새 bank에 없는 회차 파일은 정리
+  const existing = await fs.readdir(ROUNDS_DIR).catch(() => [] as string[]);
+  for (const name of existing) {
+    if (!name.endsWith(".json")) continue;
+    const id = name.slice(0, -5);
+    if (!validIds.has(id)) {
+      await fs
+        .rm(path.join(ROUNDS_DIR, name), { force: true })
+        .catch(() => undefined);
+    }
+  }
+
+  const updatedAt =
+    typeof bank.updatedAt === "string" && bank.updatedAt
+      ? bank.updatedAt
+      : new Date().toISOString();
+  const manifest = { rounds: manifestEntries, updatedAt };
+  await fs.mkdir(path.dirname(INDEX_FILE), { recursive: true });
+  await fs.writeFile(
+    INDEX_FILE,
+    JSON.stringify(manifest, null, 2) + "\n",
+    "utf-8",
+  );
+
+  // 레거시 단일 번들 잔존 시 정리
+  await fs.rm(LEGACY_BANK_FILE, { force: true }).catch(() => undefined);
 }
 
 function saveBankPlugin(): Plugin {
@@ -138,15 +215,10 @@ function saveBankPlugin(): Plugin {
               return;
             }
             await externalizeBank(json);
-            await fs.mkdir(path.dirname(BANK_FILE), { recursive: true });
-            await fs.writeFile(
-              BANK_FILE,
-              JSON.stringify(json, null, 2) + "\n",
-              "utf-8",
-            );
+            await writeBankSplit(json);
             res.setHeader("Content-Type", "application/json");
             res.end(
-              JSON.stringify({ ok: true, path: "public/data/cbt.json" }),
+              JSON.stringify({ ok: true, path: "public/data/" }),
             );
           } catch (err) {
             res.statusCode = 500;

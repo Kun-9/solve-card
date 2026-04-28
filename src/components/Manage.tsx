@@ -120,7 +120,7 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
     setSavedMsg("저장 중…");
     const result = await saveBankToFile(draft);
     if (result.ok) {
-      setSavedMsg("저장 완료 · public/data/cbt.json 갱신");
+      setSavedMsg("저장 완료 · public/data/ 갱신");
     } else {
       setSavedMsg(`로컬 저장됨 · 파일 반영 실패(${result.error})`);
     }
@@ -154,7 +154,7 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
   async function handleResyncRemote() {
     if (
       !window.confirm(
-        "기본 기출 데이터(public/data/cbt.json)로 다시 동기화할까요? 직접 추가/수정한 내용이 있다면 사라질 수 있어요.",
+        "기본 기출 데이터(public/data/index.json)로 다시 동기화할까요? 직접 추가/수정한 내용이 있다면 사라질 수 있어요.",
       )
     )
       return;

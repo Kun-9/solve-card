@@ -1,10 +1,24 @@
-import type { QuestionBank, RoundResult, ScoreHistory } from "../types";
+import type { QuestionBank, Round, RoundResult, ScoreHistory } from "../types";
 import { SEED_BANK } from "./seed";
 
 const BANK_KEY = "solve-card:bank:v1";
 const HISTORY_KEY = "solve-card:history:v1";
 const REMOTE_VERSION_KEY = "solve-card:bank:remoteVersion";
-const REMOTE_URL = `${import.meta.env.BASE_URL}data/cbt.json`;
+const INDEX_URL = `${import.meta.env.BASE_URL}data/index.json`;
+const roundUrl = (id: string) =>
+  `${import.meta.env.BASE_URL}data/rounds/${id}.json`;
+
+interface ManifestEntry {
+  id: string;
+  category?: string;
+  title?: string;
+  description?: string;
+  questionCount?: number;
+}
+interface Manifest {
+  rounds: ManifestEntry[];
+  updatedAt?: string;
+}
 
 const isBrowser = typeof window !== "undefined" && !!window.localStorage;
 
@@ -24,6 +38,28 @@ function readStoredBank(): QuestionBank | null {
   return null;
 }
 
+async function fetchRemoteBank(): Promise<QuestionBank | null> {
+  const indexRes = await fetch(INDEX_URL, { cache: "no-store" });
+  if (!indexRes.ok) return null;
+  const manifest = (await indexRes.json()) as Manifest;
+  if (!manifest || !Array.isArray(manifest.rounds) || manifest.rounds.length === 0) {
+    return null;
+  }
+
+  const rounds = await Promise.all(
+    manifest.rounds.map(async (entry) => {
+      const res = await fetch(roundUrl(entry.id), { cache: "no-store" });
+      if (!res.ok) throw new Error(`round fetch failed: ${entry.id} (${res.status})`);
+      return (await res.json()) as Round;
+    }),
+  );
+
+  return {
+    rounds,
+    updatedAt: manifest.updatedAt ?? "",
+  };
+}
+
 export async function loadBankAsync(): Promise<QuestionBank> {
   if (!isBrowser) return SEED_BANK;
 
@@ -31,18 +67,15 @@ export async function loadBankAsync(): Promise<QuestionBank> {
   const storedRemoteVersion = localStorage.getItem(REMOTE_VERSION_KEY);
 
   try {
-    const res = await fetch(REMOTE_URL, { cache: "no-store" });
-    if (res.ok) {
-      const remote = (await res.json()) as QuestionBank;
-      if (remote && Array.isArray(remote.rounds) && remote.rounds.length > 0) {
-        const remoteVersion = remote.updatedAt ?? "";
-        if (!stored || storedRemoteVersion !== remoteVersion) {
-          localStorage.setItem(BANK_KEY, JSON.stringify(remote));
-          localStorage.setItem(REMOTE_VERSION_KEY, remoteVersion);
-          return remote;
-        }
-        return stored;
+    const remote = await fetchRemoteBank();
+    if (remote && remote.rounds.length > 0) {
+      const remoteVersion = remote.updatedAt ?? "";
+      if (!stored || storedRemoteVersion !== remoteVersion) {
+        localStorage.setItem(BANK_KEY, JSON.stringify(remote));
+        localStorage.setItem(REMOTE_VERSION_KEY, remoteVersion);
+        return remote;
       }
+      return stored;
     }
   } catch {
     // 오프라인 또는 fetch 실패 — 폴백

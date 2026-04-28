@@ -27,37 +27,52 @@ npm run build
 npm run preview
 ```
 
-문제 데이터(`public/data/cbt.json`)는 저장소에 포함되어 있어 별도 준비가 필요하지 않습니다.
+문제 데이터(`public/data/index.json` + `public/data/rounds/*.json`)는
+저장소에 포함되어 있어 별도 준비가 필요하지 않습니다.
 
 ## 데이터 구조
 
-`public/data/cbt.json`
+회차 메타데이터 매니페스트와 회차별 본문 파일로 분리되어 있습니다.
+
+`public/data/index.json`
 
 ```jsonc
 {
   "rounds": [
     {
       "id": "iz20200606",
+      "category": "iz",
       "title": "정보처리기사 필기 · 2020-06-06",
       "description": "2020-06-06 회차 · 100문항",
-      "questions": [
-        {
-          "id": "iz20200606-1",
-          "prompt": "...",
-          "choices": ["...", "...", "...", "..."],
-          "answerIndex": 2,
-          "explanation": "...",
-          "section": "1과목: 소프트웨어 설계"
-        }
-      ]
+      "questionCount": 100
     }
   ],
   "updatedAt": "2026-04-28T..."
 }
 ```
 
-첫 진입 시 파일을 받아 localStorage에 캐시합니다.
-이후에는 `updatedAt`이 변경된 경우에만 다시 가져옵니다.
+`public/data/rounds/iz20200606.json`
+
+```jsonc
+{
+  "id": "iz20200606",
+  "title": "정보처리기사 필기 · 2020-06-06",
+  "description": "2020-06-06 회차 · 100문항",
+  "questions": [
+    {
+      "id": "iz20200606-1",
+      "prompt": "...",
+      "choices": ["...", "...", "...", "..."],
+      "answerIndex": 2,
+      "explanation": "...",
+      "section": "1과목: 소프트웨어 설계"
+    }
+  ]
+}
+```
+
+첫 진입 시 매니페스트와 회차들을 받아 localStorage에 캐시합니다.
+이후에는 매니페스트의 `updatedAt`이 변경된 경우에만 다시 가져옵니다.
 
 ## 문제 관리
 

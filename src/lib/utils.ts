@@ -36,7 +36,7 @@ export function choiceLabel(index: number): string {
 }
 
 /**
- * cbt.json의 imageUrl을 실제 src로 변환한다.
+ * 회차 데이터의 imageUrl을 실제 src로 변환한다.
  * - data:/blob:/http(s):/// 절대 경로는 그대로
  * - 그 외(상대 경로)는 BASE_URL을 prefix로 붙임 (정적 자산)
  */

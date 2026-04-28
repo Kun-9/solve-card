@@ -6,12 +6,13 @@ interface HomeProps {
   history: ScoreHistory;
   totalQuestions: number;
   onStartRound: (round: Round) => void;
-  onStartRandom: () => void;
+  onStartRandom: (subjectKey?: string) => void;
   onManage: () => void;
 }
 
 const ALL = "__all__" as const;
 const YEAR_RE = /(\d{4})-(\d{2})-(\d{2})/;
+const SUBJECT_RE = /^(\d+과목)/;
 
 function extractDateLabel(round: Round): string | null {
   const m = round.title.match(YEAR_RE) ?? round.id.match(/(\d{4})(\d{2})(\d{2})/);
@@ -50,6 +51,23 @@ export function Home({
   }, [bank, dateMap]);
 
   const [yearFilter, setYearFilter] = useState<string>(ALL);
+  const [subjectFilter, setSubjectFilter] = useState<string>(ALL);
+
+  const subjects = useMemo(() => {
+    const map = new Map<string, string>();
+    bank.rounds.forEach((r) => {
+      r.questions.forEach((q) => {
+        if (!q.section) return;
+        const m = q.section.match(SUBJECT_RE);
+        if (!m) return;
+        const key = m[1];
+        if (!map.has(key)) map.set(key, q.section);
+      });
+    });
+    return [...map.entries()]
+      .map(([key, fullLabel]) => ({ key, fullLabel }))
+      .sort((a, b) => a.key.localeCompare(b.key, "ko"));
+  }, [bank]);
 
   const filtered = useMemo(() => {
     if (yearFilter === ALL) return bank.rounds;
@@ -60,19 +78,51 @@ export function Home({
 
   return (
     <div className="stack-xl stack">
-      <section className="stack" style={{ gap: 14 }}>
+      <section className="stack" style={{ gap: 16 }}>
         <h1 className="h-display">기출, 한 장씩.</h1>
         <p className="body-lg">
           {bank.rounds.length}개 회차 · {totalQuestions}문제
         </p>
-        <div className="row" style={{ marginTop: 4 }}>
+
+        {subjects.length > 0 && (
+          <div className="chip-row" role="radiogroup" aria-label="랜덤 풀이 과목">
+            <button
+              type="button"
+              className="btn-pill"
+              role="radio"
+              aria-checked={subjectFilter === ALL}
+              aria-pressed={subjectFilter === ALL}
+              onClick={() => setSubjectFilter(ALL)}
+            >
+              전체
+            </button>
+            {subjects.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                className="btn-pill"
+                role="radio"
+                aria-checked={subjectFilter === s.key}
+                aria-pressed={subjectFilter === s.key}
+                onClick={() => setSubjectFilter(s.key)}
+                title={s.fullLabel}
+              >
+                {s.key}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="row" style={{ marginTop: 2 }}>
           <button
             type="button"
             className="btn btn-primary btn-lg"
-            onClick={onStartRandom}
+            onClick={() =>
+              onStartRandom(subjectFilter === ALL ? undefined : subjectFilter)
+            }
             disabled={!hasContent}
           >
-            랜덤으로 풀기
+            {subjectFilter === ALL ? "전체 랜덤" : `${subjectFilter} 랜덤`}
           </button>
           {import.meta.env.DEV && (
             <button type="button" className="btn btn-ghost btn-lg" onClick={onManage}>

@@ -71,23 +71,28 @@ export function App() {
     });
   }, []);
 
-  const startRandom = useCallback(() => {
-    const pool = bank.rounds.flatMap((r) => r.questions);
-    if (pool.length === 0) return;
-    const picked = shuffle(pool).slice(0, Math.min(RANDOM_POOL_SIZE, pool.length));
-    const round: Round = {
-      id: `random-${Date.now()}`,
-      title: "랜덤 풀기",
-      description: `전체 ${pool.length}문제 중 ${picked.length}문제를 무작위로 출제합니다.`,
-      questions: picked,
-    };
-    setRoute({
-      name: "quiz",
-      round,
-      mode: "random",
-      sourceLabel: "랜덤 풀기",
-    });
-  }, [bank]);
+  const startRandom = useCallback(
+    (subjectKey?: string) => {
+      const all = bank.rounds.flatMap((r) => r.questions);
+      const pool = subjectKey
+        ? all.filter((q) => q.section?.startsWith(subjectKey))
+        : all;
+      if (pool.length === 0) return;
+      const picked = shuffle(pool).slice(
+        0,
+        Math.min(RANDOM_POOL_SIZE, pool.length),
+      );
+      const label = subjectKey ? `${subjectKey} 랜덤` : "전체 랜덤";
+      const round: Round = {
+        id: `random-${subjectKey ?? "all"}-${Date.now()}`,
+        title: label,
+        description: `${pool.length}문제 중 ${picked.length}문제를 무작위로 출제합니다.`,
+        questions: picked,
+      };
+      setRoute({ name: "quiz", round, mode: "random", sourceLabel: label });
+    },
+    [bank],
+  );
 
   const finishQuiz = useCallback((result: RoundResult) => {
     const next = appendResult(result);

@@ -1,13 +1,13 @@
-import { parseExplanation } from "../lib/explanation";
+import type { ExplanationContent } from "../types";
 import { choiceLabel } from "../lib/utils";
 
 interface ExplanationProps {
-  /** 정답 여부. true면 correct, false면 wrong 톤. null/undefined면 중립(neutral). */
+  /** true=correct, false=wrong, null/undefined=neutral */
   correct?: boolean | null;
   answerIndex: number;
   choices: string[];
-  explanation?: string;
-  /** 카드 외곽선/배경 톤. quiz는 "card", result는 "flat". */
+  explanation?: ExplanationContent;
+  /** quiz는 "card", result 오답 노트는 "flat". */
   variant?: "card" | "flat";
 }
 
@@ -18,7 +18,6 @@ export function Explanation({
   explanation,
   variant = "card",
 }: ExplanationProps) {
-  const parsed = parseExplanation(explanation, choices);
   const answerText = choices[answerIndex] ?? "";
   const tone = correct === true ? "correct" : correct === false ? "wrong" : "neutral";
   const title =
@@ -27,6 +26,9 @@ export function Explanation({
       : correct === false
         ? "아쉬워요, 정답은 다른 보기예요"
         : "정답 해설";
+
+  const summary = explanation?.summary?.trim() ?? "";
+  const notes = explanation?.notes ?? [];
 
   return (
     <section className="explain" data-tone={tone} data-variant={variant}>
@@ -37,22 +39,24 @@ export function Explanation({
         </span>
       </header>
 
-      {parsed?.summary && (
-        <p className="explain-summary">{parsed.summary}</p>
-      )}
+      {summary && <p className="explain-summary">{summary}</p>}
 
-      {parsed && parsed.notes.length > 0 && (
+      {notes.length > 0 && (
         <div className="explain-notes">
           <span className="explain-notes-label">다른 보기 살펴보기</span>
           <ul className="explain-note-list">
-            {parsed.notes.map((note, i) => (
+            {notes.map((note, i) => (
               <li key={i} className="explain-note">
                 <span className="explain-note-key" aria-hidden>
-                  {note.matchedIndex !== undefined ? choiceLabel(note.matchedIndex) : "·"}
+                  {note.choiceIndex !== undefined
+                    ? choiceLabel(note.choiceIndex)
+                    : "·"}
                 </span>
                 <div className="explain-note-text">
                   <span className="explain-note-label">{note.label}</span>
-                  {note.body && <span className="explain-note-body">{note.body}</span>}
+                  {note.body && (
+                    <span className="explain-note-body">{note.body}</span>
+                  )}
                 </div>
               </li>
             ))}

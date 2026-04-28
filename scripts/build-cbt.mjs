@@ -47,10 +47,31 @@ function categoryFromRoundId(roundId) {
 function pickExplanation(explanations) {
   if (!Array.isArray(explanations) || explanations.length === 0) return undefined;
   const first = explanations.find(
-    (e) => e && typeof e.text === "string" && e.text.trim().length > 0,
+    (e) =>
+      e &&
+      ((e.structured && typeof e.structured === "object") ||
+        (typeof e.text === "string" && e.text.trim().length > 0)),
   );
   if (!first) return undefined;
-  return first.text.trim();
+  if (first.structured && typeof first.structured === "object") {
+    const summary =
+      typeof first.structured.summary === "string"
+        ? first.structured.summary
+        : "";
+    const notes = Array.isArray(first.structured.notes)
+      ? first.structured.notes
+          .filter((n) => n && (n.label || n.body))
+          .map((n) => ({
+            ...(typeof n.choiceIndex === "number"
+              ? { choiceIndex: n.choiceIndex }
+              : {}),
+            label: typeof n.label === "string" ? n.label : "",
+            body: typeof n.body === "string" ? n.body : "",
+          }))
+      : [];
+    return { summary, notes };
+  }
+  return { summary: first.text.trim(), notes: [] };
 }
 
 function clamp(n, min, max) {

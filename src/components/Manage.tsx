@@ -85,7 +85,7 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
       prompt: "",
       choices: ["", "", "", ""],
       answerIndex: 0,
-      explanation: "",
+      explanation: { summary: "", notes: [] },
     };
     setRounds(
       draft.rounds.map((r) =>
@@ -463,8 +463,15 @@ function QuestionEditor({
         <label className="field-label">해설 (선택)</label>
         <textarea
           className="textarea"
-          value={question.explanation ?? ""}
-          onChange={(e) => onPatch({ explanation: e.target.value })}
+          value={question.explanation?.summary ?? ""}
+          onChange={(e) =>
+            onPatch({
+              explanation: {
+                summary: e.target.value,
+                notes: question.explanation?.notes ?? [],
+              },
+            })
+          }
           placeholder="정답에 대한 짧은 설명"
         />
       </div>

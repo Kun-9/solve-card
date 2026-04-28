@@ -13,7 +13,7 @@ export const SEED_BANK: QuestionBank = {
           prompt: "대한민국의 수도는 어디일까요?",
           choices: ["부산", "서울", "인천", "대전"],
           answerIndex: 1,
-          explanation: "대한민국의 수도는 서울특별시입니다.",
+          explanation: { summary: "대한민국의 수도는 서울특별시입니다.", notes: [] },
         },
         {
           id: "q1-2",
@@ -25,7 +25,7 @@ export const SEED_BANK: QuestionBank = {
             "Hyperlink and Text Markup Language",
           ],
           answerIndex: 1,
-          explanation: "HTML은 HyperText Markup Language의 약자입니다.",
+          explanation: { summary: "HTML은 HyperText Markup Language의 약자입니다.", notes: [] },
         },
         {
           id: "q1-3",
@@ -38,14 +38,14 @@ export const SEED_BANK: QuestionBank = {
           prompt: "JavaScript에서 배열의 길이를 반환하는 속성은?",
           choices: [".size", ".count()", ".length", ".len"],
           answerIndex: 2,
-          explanation: "JavaScript 배열은 length 속성으로 원소 개수를 표시합니다.",
+          explanation: { summary: "JavaScript 배열은 length 속성으로 원소 개수를 표시합니다.", notes: [] },
         },
         {
           id: "q1-5",
           prompt: "태양계에서 가장 큰 행성은?",
           choices: ["지구", "토성", "목성", "해왕성"],
           answerIndex: 2,
-          explanation: "목성은 태양계 행성 중 가장 큽니다.",
+          explanation: { summary: "목성은 태양계 행성 중 가장 큽니다.", notes: [] },
         },
       ],
     },
@@ -59,7 +59,7 @@ export const SEED_BANK: QuestionBank = {
           prompt: "CSS에서 색상을 지정할 때 16진수 표기법으로 옳은 것은?",
           choices: ["#GGFFAA", "#1c1c1c", "rgba(255)", "color: 1c1c1c"],
           answerIndex: 1,
-          explanation: "16진수 색상은 0–9, A–F만 사용하며 #으로 시작합니다.",
+          explanation: { summary: "16진수 색상은 0–9, A–F만 사용하며 #으로 시작합니다.", notes: [] },
         },
         {
           id: "q2-2",
@@ -72,7 +72,7 @@ export const SEED_BANK: QuestionBank = {
           prompt: "브라우저에 데이터를 영구 저장할 수 있는 API는?",
           choices: ["sessionStorage", "localStorage", "memoryStorage", "tempStorage"],
           answerIndex: 1,
-          explanation: "localStorage는 브라우저를 닫아도 데이터를 유지합니다.",
+          explanation: { summary: "localStorage는 브라우저를 닫아도 데이터를 유지합니다.", notes: [] },
         },
         {
           id: "q2-4",

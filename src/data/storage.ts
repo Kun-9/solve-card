@@ -63,6 +63,49 @@ export function saveBank(bank: QuestionBank): void {
   localStorage.setItem(REMOTE_VERSION_KEY, "user-modified");
 }
 
+export interface SaveToFileResult {
+  ok: boolean;
+  error?: string;
+}
+
+/**
+ * dev 서버 한정: public/data/cbt.json 파일을 직접 갱신한다.
+ * prod 빌드에선 동작하지 않는다.
+ */
+export async function saveBankToFile(
+  bank: QuestionBank,
+): Promise<SaveToFileResult> {
+  if (!isBrowser) return { ok: false, error: "browser only" };
+  if (!import.meta.env.DEV) {
+    return { ok: false, error: "dev 서버에서만 동작합니다" };
+  }
+  try {
+    const next: QuestionBank = { ...bank, updatedAt: new Date().toISOString() };
+    const res = await fetch("/__save-bank", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: string;
+    };
+    if (!res.ok || !body.ok) {
+      return { ok: false, error: body.error ?? `HTTP ${res.status}` };
+    }
+    // 원격 캐시(BASE_URL/data/cbt.json) 헬퍼와 충돌하지 않도록 표시 갱신
+    if (next.updatedAt) {
+      localStorage.setItem(REMOTE_VERSION_KEY, next.updatedAt);
+    }
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "네트워크 오류",
+    };
+  }
+}
+
 export async function resyncRemoteBank(): Promise<QuestionBank> {
   if (isBrowser) {
     localStorage.removeItem(BANK_KEY);

@@ -5,6 +5,7 @@ import {
   importBankFromFile,
   resetToSeed,
   resyncRemoteBank,
+  saveBankToFile,
 } from "../data/storage";
 import { choiceLabel, readImageAsDataUrl, resolveImageUrl, uid } from "../lib/utils";
 
@@ -114,10 +115,16 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
     patchRound(roundId, { questions: next });
   }
 
-  function handleSave() {
+  async function handleSave() {
     onChange(draft);
-    setSavedMsg("저장했어요");
-    window.setTimeout(() => setSavedMsg(""), 1600);
+    setSavedMsg("저장 중…");
+    const result = await saveBankToFile(draft);
+    if (result.ok) {
+      setSavedMsg("저장 완료 · public/data/cbt.json 갱신");
+    } else {
+      setSavedMsg(`로컬 저장됨 · 파일 반영 실패(${result.error})`);
+    }
+    window.setTimeout(() => setSavedMsg(""), 2600);
   }
 
   function handleRevert() {

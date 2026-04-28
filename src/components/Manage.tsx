@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Question, QuestionBank, Round } from "../types";
 import {
   exportBankToFile,
@@ -16,49 +16,56 @@ interface ManageProps {
 }
 
 export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
+  const [draft, setDraft] = useState<QuestionBank>(bank);
   const [activeId, setActiveId] = useState<string | null>(
     bank.rounds[0]?.id ?? null,
   );
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [savedMsg, setSavedMsg] = useState<string>("");
   const [importMsg, setImportMsg] = useState<string>("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // 외부에서 bank가 바뀌면(저장/import/resync 등) draft도 갱신
+  useEffect(() => {
+    setDraft(bank);
+  }, [bank]);
 
   const activeRound = useMemo(
-    () => bank.rounds.find((r) => r.id === activeId) ?? null,
-    [bank, activeId],
+    () => draft.rounds.find((r) => r.id === activeId) ?? null,
+    [draft, activeId],
   );
 
-  function updateRounds(rounds: Round[]) {
-    onChange({ ...bank, rounds });
+  function setRounds(rounds: Round[]) {
+    setDraft((prev) => ({ ...prev, rounds }));
   }
 
   function addRound() {
     const id = uid("round");
     const round: Round = {
       id,
-      title: `${bank.rounds.length + 1}회차`,
+      title: `${draft.rounds.length + 1}회차`,
       description: "",
       questions: [],
     };
-    updateRounds([...bank.rounds, round]);
+    setRounds([...draft.rounds, round]);
     setActiveId(id);
   }
 
   function deleteRound(roundId: string) {
-    if (!window.confirm("이 회차를 삭제할까요? 되돌릴 수 없어요.")) return;
-    const next = bank.rounds.filter((r) => r.id !== roundId);
-    updateRounds(next);
+    if (!window.confirm("이 회차를 삭제할까요? 저장 후에는 되돌릴 수 없어요.")) return;
+    const next = draft.rounds.filter((r) => r.id !== roundId);
+    setRounds(next);
     if (activeId === roundId) setActiveId(next[0]?.id ?? null);
   }
 
   function patchRound(roundId: string, patch: Partial<Round>) {
-    updateRounds(
-      bank.rounds.map((r) => (r.id === roundId ? { ...r, ...patch } : r)),
+    setRounds(
+      draft.rounds.map((r) => (r.id === roundId ? { ...r, ...patch } : r)),
     );
   }
 
   function patchQuestion(roundId: string, qid: string, patch: Partial<Question>) {
-    updateRounds(
-      bank.rounds.map((r) =>
+    setRounds(
+      draft.rounds.map((r) =>
         r.id === roundId
           ? {
               ...r,
@@ -79,16 +86,16 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
       answerIndex: 0,
       explanation: "",
     };
-    updateRounds(
-      bank.rounds.map((r) =>
+    setRounds(
+      draft.rounds.map((r) =>
         r.id === roundId ? { ...r, questions: [...r.questions, newQ] } : r,
       ),
     );
   }
 
   function deleteQuestion(roundId: string, qid: string) {
-    updateRounds(
-      bank.rounds.map((r) =>
+    setRounds(
+      draft.rounds.map((r) =>
         r.id === roundId
           ? { ...r, questions: r.questions.filter((q) => q.id !== qid) }
           : r,
@@ -97,7 +104,7 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
   }
 
   function moveQuestion(roundId: string, qid: string, direction: -1 | 1) {
-    const round = bank.rounds.find((r) => r.id === roundId);
+    const round = draft.rounds.find((r) => r.id === roundId);
     if (!round) return;
     const idx = round.questions.findIndex((q) => q.id === qid);
     const target = idx + direction;
@@ -105,6 +112,17 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
     const next = round.questions.slice();
     [next[idx], next[target]] = [next[target], next[idx]];
     patchRound(roundId, { questions: next });
+  }
+
+  function handleSave() {
+    onChange(draft);
+    setSavedMsg("저장했어요");
+    window.setTimeout(() => setSavedMsg(""), 1600);
+  }
+
+  function handleRevert() {
+    setDraft(bank);
+    setSavedMsg("");
   }
 
   async function handleImport(file: File) {
@@ -150,22 +168,30 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
           <div>
             <h1 className="h-section">문제 관리</h1>
             <p className="caption">
-              회차와 문제를 추가하거나, JSON으로 내보내고 가져올 수 있어요.
+              편집한 내용은 <strong>저장</strong>을 눌러야 반영돼요.
             </p>
           </div>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
-            닫기
-          </button>
+          <div className="row" style={{ gap: 6 }}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={handleRevert}>
+              되돌리기
+            </button>
+            <button type="button" className="btn btn-primary btn-sm" onClick={handleSave}>
+              저장
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
+              닫기
+            </button>
+          </div>
         </div>
 
         <div className="toolbar">
-          <button type="button" className="btn btn-primary" onClick={addRound}>
+          <button type="button" className="btn btn-cream" onClick={addRound}>
             회차 추가
           </button>
           <button
             type="button"
             className="btn btn-cream"
-            onClick={() => exportBankToFile(bank)}
+            onClick={() => exportBankToFile(draft)}
           >
             JSON 내보내기
           </button>
@@ -193,16 +219,17 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
               e.target.value = "";
             }}
           />
+          {savedMsg && <span className="caption">{savedMsg}</span>}
           {importMsg && <span className="caption">{importMsg}</span>}
         </div>
       </section>
 
       <section className="stack" style={{ gap: 18 }}>
         <div className="row" style={{ gap: 6 }}>
-          {bank.rounds.length === 0 && (
+          {draft.rounds.length === 0 && (
             <span className="caption">아직 회차가 없어요. 회차 추가를 눌러보세요.</span>
           )}
-          {bank.rounds.map((r) => (
+          {draft.rounds.map((r) => (
             <button
               key={r.id}
               type="button"

@@ -29,9 +29,8 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit, onAttemptedCh
   const attempt = attempts[index];
   const isLast = index === total - 1;
   const progress = useMemo(() => {
-    const answered = attempts.filter((a) => a.revealed).length;
-    return Math.round((answered / total) * 100);
-  }, [attempts, total]);
+    return Math.round(((index + 1) / total) * 100);
+  }, [index, total]);
 
   const attemptsRef = useRef(attempts);
   attemptsRef.current = attempts;

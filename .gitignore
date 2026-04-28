@@ -1,0 +1,23 @@
+node_modules
+dist
+.DS_Store
+*.local
+.vite
+*.tsbuildinfo
+
+# editor / OS
+.vscode
+.idea
+
+# tooling artifacts (oh-my-claudecode, claude code, etc.)
+.omc
+.claude
+.codex
+*.log
+
+# crawler / data prep (앱 런타임에는 변환된 public/data/cbt.json만 사용)
+cbtbank
+__pycache__
+*.pyc
+.venv
+venv

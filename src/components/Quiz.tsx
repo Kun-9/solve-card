@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AnswerLog, Round, RoundResult } from "../types";
 import { choiceLabel, resolveImageUrl } from "../lib/utils";
+import { Explanation } from "./Explanation";
 
 interface QuizProps {
   round: Round;
@@ -239,11 +240,12 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
         </div>
 
         {attempt.revealed && (
-          <Feedback
+          <Explanation
             correct={attempt.selectedIndex === current.answerIndex}
-            answerLetter={choiceLabel(current.answerIndex)}
-            answerText={current.choices[current.answerIndex]}
+            answerIndex={current.answerIndex}
+            choices={current.choices}
             explanation={current.explanation}
+            variant="card"
           />
         )}
       </article>
@@ -350,23 +352,3 @@ function computeChoiceState(
   return "default";
 }
 
-interface FeedbackProps {
-  correct: boolean;
-  answerLetter: string;
-  answerText: string;
-  explanation?: string;
-}
-
-function Feedback({ correct, answerLetter, answerText, explanation }: FeedbackProps) {
-  return (
-    <div className="feedback" data-tone={correct ? "correct" : "wrong"}>
-      <p className="feedback-title">
-        {correct ? "정답이에요" : "아쉬워요, 정답은 다른 보기예요"}
-      </p>
-      <p className="feedback-body">
-        정답 <strong>{answerLetter}</strong>. {answerText}
-        {explanation ? ` — ${explanation}` : ""}
-      </p>
-    </div>
-  );
-}

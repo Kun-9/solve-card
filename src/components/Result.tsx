@@ -1,5 +1,6 @@
 import type { RoundResult } from "../types";
 import { formatDuration, choiceLabel, resolveImageUrl } from "../lib/utils";
+import { Explanation } from "./Explanation";
 
 interface ResultProps {
   result: RoundResult;
@@ -79,10 +80,13 @@ export function Result({ result, onRetry, onHome }: ResultProps) {
                     ? `${choiceLabel(log.selectedIndex)}. ${log.choices[log.selectedIndex]}`
                     : "선택하지 않음"}
                 </p>
-                <p className="caption" style={{ color: "var(--correct)" }}>
-                  정답: {choiceLabel(log.answerIndex)}. {log.choices[log.answerIndex]}
-                </p>
-                {log.explanation && <p className="body">{log.explanation}</p>}
+                <Explanation
+                  correct={false}
+                  answerIndex={log.answerIndex}
+                  choices={log.choices}
+                  explanation={log.explanation}
+                  variant="flat"
+                />
               </article>
             ))}
           </div>

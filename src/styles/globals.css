@@ -1008,34 +1008,158 @@ main {
   border-color: var(--correct);
 }
 
-.feedback {
+/* ─────────────────────────────────────────────
+   Explanation card (정답 해설)
+   ───────────────────────────────────────────── */
+.explain {
   margin-top: 18px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   border-radius: var(--r-card);
   border: 1px solid var(--hairline);
   background: var(--cream-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.feedback[data-tone="correct"] {
-  border-color: var(--correct);
+.explain[data-variant="flat"] {
+  margin-top: 4px;
+  padding: 14px 0 0;
+  border: none;
+  border-top: 1px solid var(--hairline);
+  border-radius: 0;
+  background: transparent;
+}
+
+.explain[data-tone="correct"] {
+  border-color: rgba(45, 106, 79, 0.28);
   background: var(--correct-bg);
 }
 
-.feedback[data-tone="wrong"] {
-  border-color: var(--wrong);
+.explain[data-tone="wrong"] {
+  border-color: rgba(155, 44, 44, 0.22);
   background: var(--wrong-bg);
 }
 
-.feedback-title {
-  font-size: 15px;
-  font-weight: 600;
-  margin: 0 0 4px;
+.explain[data-variant="flat"][data-tone="correct"],
+.explain[data-variant="flat"][data-tone="wrong"] {
+  background: transparent;
+  border-top-color: var(--hairline);
 }
 
-.feedback-body {
-  font-size: 14px;
+.explain-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.explain-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--charcoal-40);
+}
+
+.explain[data-tone="correct"] .explain-title {
+  color: var(--correct);
+}
+
+.explain[data-tone="wrong"] .explain-title {
+  color: var(--wrong);
+}
+
+.explain-answer {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--charcoal);
+  line-height: 1.45;
+}
+
+.explain-answer strong {
+  font-weight: 700;
+}
+
+.explain-summary {
+  font-size: 14.5px;
+  line-height: 1.65;
   color: var(--charcoal-82);
   margin: 0;
+  white-space: pre-line;
+}
+
+.explain-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+
+.explain[data-tone="correct"] .explain-notes {
+  border-top-color: rgba(45, 106, 79, 0.18);
+}
+
+.explain[data-tone="wrong"] .explain-notes {
+  border-top-color: rgba(155, 44, 44, 0.16);
+}
+
+.explain-notes-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--charcoal-40);
+}
+
+.explain-note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.explain-note {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.explain-note-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: var(--r-pill);
+  background: var(--charcoal-04);
+  color: var(--charcoal-82);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.explain-note-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.explain-note-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--charcoal);
+  line-height: 1.4;
+}
+
+.explain-note-body {
+  font-size: 13px;
+  color: var(--charcoal-82);
+  line-height: 1.55;
 }
 
 /* ─────────────────────────────────────────────

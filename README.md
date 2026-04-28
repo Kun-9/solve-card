@@ -1,15 +1,15 @@
 # solve-card
 
-기출 문제를 카드 한 장씩 풀어보는 웹 앱.
-정보처리기사 필기 8회차(2020–2022) 800문항이 기본으로 들어 있다.
+기출 문제를 카드처럼 한 장씩 푸는 웹앱입니다.
+정보처리기사 필기 8회차(2020–2022), 총 800문항을 수록하고 있습니다.
 
 ## 기능
 
 - 회차별 풀기 / 전체 무작위 풀기
-- 답을 고르면 즉시 정답·해설 표시
-- 회차별 최근 점수와 최고 점수 기록 (localStorage)
-- 결과 화면의 오답 노트
-- 모바일 대응
+- 답을 선택하면 정답·해설을 즉시 표시합니다
+- 회차별 최근 점수와 최고 점수를 localStorage에 저장합니다
+- 결과 화면에서 오답 노트를 제공합니다
+- 모바일 환경을 지원합니다
 
 ## 시작하기
 
@@ -18,7 +18,7 @@ npm install
 npm run dev
 ```
 
-브라우저에서 `http://localhost:5173` 접속.
+브라우저에서 `http://localhost:5173`로 접속합니다.
 
 빌드:
 
@@ -27,7 +27,7 @@ npm run build
 npm run preview
 ```
 
-문제 데이터(`public/data/cbt.json`)는 저장소에 포함되어 있어 별도 준비 없이 바로 실행된다.
+문제 데이터(`public/data/cbt.json`)는 저장소에 포함되어 있어 별도 준비가 필요하지 않습니다.
 
 ## 데이터 구조
 
@@ -56,29 +56,29 @@ npm run preview
 }
 ```
 
-앱은 첫 진입 시 이 파일을 가져와 localStorage에 캐시한다.
-이후에는 `updatedAt`이 바뀌었을 때만 다시 받아온다.
+첫 진입 시 파일을 받아 localStorage에 캐시합니다.
+이후에는 `updatedAt`이 변경된 경우에만 다시 가져옵니다.
 
 ## 문제 관리
 
-개발 환경(`npm run dev`)에서만 문제 관리 화면이 노출된다.
-회차/문항 추가·수정·삭제, JSON 가져오기/내보내기, 기출 데이터 재동기화가 가능하다.
-프로덕션 빌드에는 포함되지 않는다.
+개발 모드(`npm run dev`)에서만 관리 화면이 노출됩니다.
+회차/문항 추가·수정·삭제, JSON 가져오기/내보내기, 기출 데이터 재동기화를 지원합니다.
+프로덕션 빌드에는 포함되지 않습니다.
 
 ## 기술 스택
 
 - Vite + React + TypeScript
-- localStorage (별도 백엔드 없음)
+- localStorage (백엔드 없음)
 
 ## 배포
 
-`main` 브랜치에 푸시되면 GitHub Actions가 GitHub Pages로 자동 배포한다
+`main` 브랜치에 푸시되면 GitHub Actions가 GitHub Pages로 자동 배포합니다
 (`.github/workflows/deploy.yml`).
 
-처음 한 번은 저장소의 **Settings → Pages → Build and deployment → Source**를
-**GitHub Actions**로 바꿔주어야 한다.
+최초 1회는 저장소 **Settings → Pages → Build and deployment → Source**를
+**GitHub Actions**로 변경해야 합니다.
 
 ## 데이터 출처
 
-기출 원본은 [cbtbank.kr](https://cbtbank.kr) 에서 가져왔다.
-학습 목적으로만 사용한다.
+기출 원본: [cbtbank.kr](https://cbtbank.kr)
+비상업·개인 학습용. 모든 문항의 권리는 원저작자에 있음.

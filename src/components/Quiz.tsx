@@ -34,9 +34,47 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
     return Math.round((answered / total) * 100);
   }, [attempts, total]);
 
+  const attemptsRef = useRef(attempts);
+  attemptsRef.current = attempts;
+  const poppedRef = useRef(false);
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [index]);
+
+  // 브라우저 뒤로가기/새로고침/탭 닫기 가드
+  useEffect(() => {
+    window.history.pushState({ quizGuard: true }, "");
+
+    function onPop() {
+      if (attemptsRef.current.some((a) => a.revealed)) {
+        const ok = window.confirm("나가면 진행한 답변이 사라져요. 그만두시겠어요?");
+        if (!ok) {
+          window.history.pushState({ quizGuard: true }, "");
+          return;
+        }
+      }
+      poppedRef.current = true;
+      onExit();
+    }
+
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (attemptsRef.current.some((a) => a.revealed)) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+
+    window.addEventListener("popstate", onPop);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      if (!poppedRef.current && window.history.state?.quizGuard) {
+        window.history.back();
+      }
+    };
+  }, [onExit]);
 
   function selectChoice(choiceIndex: number) {
     if (attempt.revealed) return;

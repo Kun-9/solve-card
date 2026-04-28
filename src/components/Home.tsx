@@ -5,7 +5,7 @@ interface HomeProps {
   bank: QuestionBank;
   history: ScoreHistory;
   totalQuestions: number;
-  onStartRound: (round: Round) => void;
+  onStartRound: (round: Round, shuffled: boolean) => void;
   onStartRandom: (subjectKey?: string) => void;
   onManage: () => void;
 }
@@ -52,6 +52,7 @@ export function Home({
 
   const [yearFilter, setYearFilter] = useState<string>(ALL);
   const [subjectFilter, setSubjectFilter] = useState<string>(ALL);
+  const [shuffled, setShuffled] = useState(false);
 
   const subjects = useMemo(() => {
     const map = new Map<string, string>();
@@ -133,29 +134,52 @@ export function Home({
       </section>
 
       <section className="stack">
-        {years.length > 1 && (
-          <div className="chip-row">
-            <button
-              type="button"
-              className="btn-pill"
-              aria-pressed={yearFilter === ALL}
-              onClick={() => setYearFilter(ALL)}
-            >
-              전체
-            </button>
-            {years.map((y) => (
+        <div className="row row-between" style={{ gap: 12, flexWrap: "wrap" }}>
+          {years.length > 1 ? (
+            <div className="chip-row">
               <button
-                key={y}
                 type="button"
                 className="btn-pill"
-                aria-pressed={yearFilter === y}
-                onClick={() => setYearFilter(y)}
+                aria-pressed={yearFilter === ALL}
+                onClick={() => setYearFilter(ALL)}
               >
-                {y}년
+                전체
               </button>
-            ))}
-          </div>
-        )}
+              {years.map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  className="btn-pill"
+                  aria-pressed={yearFilter === y}
+                  onClick={() => setYearFilter(y)}
+                >
+                  {y}년
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span />
+          )}
+
+          <button
+            type="button"
+            className="shuffle-toggle"
+            aria-pressed={shuffled}
+            onClick={() => setShuffled((v) => !v)}
+            title="회차를 클릭하면 그 회차 안에서 무작위 순서로 출제"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M16 3h5v5M4 20l16.5-16.5M21 16v5h-5M15 15l5.5 5.5M4 4l5 5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            셔플 {shuffled ? "ON" : "OFF"}
+          </button>
+        </div>
 
         {bank.rounds.length === 0 ? (
           <div className="card empty">
@@ -177,7 +201,8 @@ export function Home({
                 round={round}
                 history={history}
                 dateLabel={dateMap.get(round.id) ?? null}
-                onStart={onStartRound}
+                shuffled={shuffled}
+                onStart={(r) => onStartRound(r, shuffled)}
               />
             ))}
           </div>
@@ -191,10 +216,11 @@ interface RoundCardProps {
   round: Round;
   history: ScoreHistory;
   dateLabel: string | null;
+  shuffled: boolean;
   onStart: (round: Round) => void;
 }
 
-function RoundCard({ round, history, dateLabel, onStart }: RoundCardProps) {
+function RoundCard({ round, history, dateLabel, shuffled, onStart }: RoundCardProps) {
   const log = history[round.id];
   const recent = log?.[0];
   const best = log?.reduce<number | null>((acc, r) => {
@@ -211,7 +237,10 @@ function RoundCard({ round, history, dateLabel, onStart }: RoundCardProps) {
       disabled={disabled}
     >
       <div className="stack" style={{ gap: 14 }}>
-        <span className="caption">{dateLabel ?? round.id}</span>
+        <div className="row row-between" style={{ alignItems: "center" }}>
+          <span className="caption">{dateLabel ?? round.id}</span>
+          {shuffled && <span className="tag tag-shuffle">셔플</span>}
+        </div>
         <h3 className="h-card">{round.title}</h3>
         <div className="row row-between" style={{ marginTop: 4 }}>
           <span className="caption">

@@ -736,6 +736,37 @@ main {
   color: var(--charcoal-82);
 }
 
+.tag-shuffle {
+  background: var(--charcoal);
+  color: var(--cream-soft);
+}
+
+.shuffle-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline);
+  background: transparent;
+  transition: color 120ms ease, background-color 120ms ease,
+    border-color 120ms ease;
+  white-space: nowrap;
+}
+
+.shuffle-toggle:hover {
+  color: var(--charcoal);
+  background: var(--cream-soft);
+}
+
+.shuffle-toggle[aria-pressed="true"] {
+  background: var(--charcoal);
+  color: var(--cream-soft);
+  border-color: var(--charcoal);
+}
+
 .score-big {
   font-size: 56px;
   line-height: 1;

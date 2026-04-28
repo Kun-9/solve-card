@@ -61,13 +61,14 @@ export function App() {
     setRoute({ name: "manage" });
   }, []);
 
-  const startRound = useCallback((round: Round) => {
+  const startRound = useCallback((round: Round, shuffled = false) => {
     if (round.questions.length === 0) return;
+    const questions = shuffled ? shuffle(round.questions) : round.questions;
     setRoute({
       name: "quiz",
-      round,
-      mode: "ordered",
-      sourceLabel: round.title,
+      round: { ...round, questions },
+      mode: shuffled ? "random" : "ordered",
+      sourceLabel: shuffled ? `${round.title} · 셔플` : round.title,
     });
   }, []);
 
@@ -142,7 +143,7 @@ export function App() {
               bank={bank}
               history={history}
               totalQuestions={totalQuestions}
-              onStartRound={startRound}
+              onStartRound={(round, shuffled) => startRound(round, shuffled)}
               onStartRandom={startRandom}
               onManage={goManage}
             />

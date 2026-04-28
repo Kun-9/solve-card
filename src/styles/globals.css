@@ -512,33 +512,56 @@ main {
   color: var(--charcoal);
 }
 
-.quiz-next {
-  border-radius: var(--r-pill);
-  padding: 9px 16px 9px 18px;
-  gap: 6px;
+/* ─────────────────────────────────────────────
+   Quiz fixed action bar (mobile-friendly)
+   ───────────────────────────────────────────── */
+.quiz-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  /* 하단 액션바와 겹치지 않도록 여백 */
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
 }
 
-.quiz-next:disabled {
-  background: var(--charcoal-08);
-  color: var(--muted);
-  box-shadow: none;
+.quiz-actionbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 12;
+  background: var(--cream);
+  border-top: 1px solid var(--hairline);
+  padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px));
+  backdrop-filter: blur(6px);
 }
 
-.quiz-footer {
+.quiz-actionbar-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.quiz-footer .btn {
-  color: var(--muted);
-  border-color: var(--hairline);
+.quiz-action-prev,
+.quiz-action-next {
+  border-radius: var(--r-pill);
+  padding: 10px 18px;
+  gap: 6px;
 }
 
-.quiz-footer .btn:hover:not(:disabled) {
-  color: var(--charcoal);
-  border-color: var(--hairline-strong);
+.quiz-action-prev:disabled {
+  opacity: 0.35;
+}
+
+.quiz-action-next.btn-ghost {
+  color: var(--charcoal-82);
+}
+
+.quiz-action-next.btn-primary {
+  /* primary 그대로 */
 }
 
 @media (max-width: 640px) {

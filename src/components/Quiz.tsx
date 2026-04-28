@@ -15,12 +15,15 @@ interface AttemptState {
   revealed: boolean;
 }
 
+const SWIPE_THRESHOLD = 60;
+
 export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) {
   const [index, setIndex] = useState(0);
   const [attempts, setAttempts] = useState<AttemptState[]>(() =>
     round.questions.map(() => ({ selectedIndex: null, revealed: false })),
   );
   const startedAt = useRef<number>(Date.now());
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
   const total = round.questions.length;
   const current = round.questions[index];
@@ -105,8 +108,69 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
     onExit();
   }
 
+  // 키보드 단축키: ← / → 이동, 1-N으로 보기 선택
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        prev();
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        if (attempt.revealed) next();
+        else skip();
+        return;
+      }
+      const num = Number(e.key);
+      if (Number.isInteger(num) && num >= 1 && num <= current.choices.length) {
+        e.preventDefault();
+        selectChoice(num - 1);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, attempt.revealed, current.choices.length]);
+
+  // 모바일 좌/우 스와이프
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    swipeStart.current = { x: t.clientX, y: t.clientY };
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) {
+      // 왼쪽으로 스와이프 → 다음/스킵
+      if (attempt.revealed) next();
+      else skip();
+    } else {
+      prev();
+    }
+  }
+
+  const rightLabel = isLast
+    ? "결과 보기"
+    : attempt.revealed
+      ? "다음 문제"
+      : "건너뛰기";
+  const rightPrimary = attempt.revealed || isLast;
+
   return (
-    <div className="stack-lg stack">
+    <div
+      className="quiz-shell"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       <header className="quiz-header">
         <button
           type="button"
@@ -137,24 +201,6 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
             <span style={{ width: `${progress}%` }} />
           </div>
         </div>
-
-        <button
-          type="button"
-          className="btn btn-primary quiz-next"
-          disabled={!attempt.revealed}
-          onClick={next}
-        >
-          {isLast ? "결과 보기" : "다음"}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M9 6l6 6-6 6"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
       </header>
 
       <article className="card card-lg stack" style={{ gap: 16 }}>
@@ -193,27 +239,31 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
         )}
       </article>
 
-      <div className="quiz-footer">
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm"
-          onClick={prev}
-          disabled={index === 0}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M15 18l-6-6 6-6"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          이전 문제
-        </button>
-        {!attempt.revealed && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={skip}>
-            건너뛰기
+      <nav className="quiz-actionbar" aria-label="문제 이동">
+        <div className="quiz-actionbar-inner">
+          <button
+            type="button"
+            className="btn btn-ghost quiz-action-prev"
+            onClick={prev}
+            disabled={index === 0}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M15 18l-6-6 6-6"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            이전
+          </button>
+          <button
+            type="button"
+            className={`btn ${rightPrimary ? "btn-primary" : "btn-ghost"} quiz-action-next`}
+            onClick={() => (attempt.revealed ? next() : skip())}
+          >
+            {rightLabel}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
                 d="M9 6l6 6-6 6"
@@ -224,8 +274,8 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
               />
             </svg>
           </button>
-        )}
-      </div>
+        </div>
+      </nav>
     </div>
   );
 }

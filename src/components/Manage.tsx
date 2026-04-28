@@ -485,7 +485,7 @@ function ChoiceImageButton({ imageUrl, onChange }: ChoiceImageButtonProps) {
   }
 
   return (
-    <div className="choice-image-button">
+    <div className="choice-image-button" data-state={imageUrl ? "filled" : "empty"}>
       {imageUrl ? (
         <>
           <button
@@ -493,45 +493,37 @@ function ChoiceImageButton({ imageUrl, onChange }: ChoiceImageButtonProps) {
             className="choice-image-thumb"
             onClick={() => inputRef.current?.click()}
             title={error || "클릭해서 교체"}
+            aria-label="보기 이미지 교체"
           >
             <img src={resolveImageUrl(imageUrl)} alt="" />
           </button>
           <button
             type="button"
             className="choice-image-remove"
-            onClick={() => onChange(undefined)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange(undefined);
+            }}
             aria-label="보기 이미지 제거"
             title="제거"
           >
-            ×
+            <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden>
+              <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
           </button>
         </>
       ) : (
         <button
           type="button"
-          className="btn btn-cream btn-sm choice-image-add"
+          className="choice-image-add"
           onClick={() => inputRef.current?.click()}
           title={error || "보기에 이미지 추가"}
           aria-label="보기 이미지 추가"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <rect
-              x="3"
-              y="5"
-              width="18"
-              height="14"
-              rx="2"
-              stroke="currentColor"
-              strokeWidth="1.6"
-            />
+            <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
             <circle cx="8.5" cy="10.5" r="1.5" fill="currentColor" />
-            <path
-              d="M21 16l-5-5-9 9"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            <path d="M21 16l-5-5-9 9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
       )}

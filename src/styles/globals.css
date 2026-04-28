@@ -618,38 +618,42 @@ main {
 
 .choice-edit-row {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) 36px;
   align-items: center;
   gap: 10px;
 }
 
 .choice-image-button {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
 }
 
-.choice-image-add {
+.choice-image-add,
+.choice-image-thumb {
   width: 36px;
   height: 36px;
   padding: 0;
+  border-radius: var(--r-std);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--hairline);
+  background: var(--cream-soft);
+  color: var(--charcoal-82);
+  overflow: hidden;
+  transition: border-color 120ms ease, background-color 120ms ease,
+    color 120ms ease;
+}
+
+.choice-image-add:hover {
+  border-color: var(--charcoal-40);
+  color: var(--charcoal);
 }
 
 .choice-image-thumb {
-  width: 44px;
-  height: 36px;
-  padding: 0;
-  border-radius: var(--r-std);
-  overflow: hidden;
-  background: var(--cream-soft);
-  border: 1px solid var(--hairline);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  background: var(--cream);
 }
 
 .choice-image-thumb img {
@@ -660,21 +664,31 @@ main {
 }
 
 .choice-image-remove {
-  width: 22px;
-  height: 22px;
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
   border-radius: var(--r-pill);
-  background: var(--charcoal-08);
-  color: var(--charcoal);
-  font-size: 14px;
-  line-height: 1;
+  background: var(--charcoal);
+  color: var(--cream-soft);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 120ms ease, transform 120ms ease, background-color 120ms ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.choice-image-button:hover .choice-image-remove,
+.choice-image-button:focus-within .choice-image-remove {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .choice-image-remove:hover {
   background: var(--wrong);
-  color: var(--cream-soft);
 }
 
 .choice-image-thumb-row {

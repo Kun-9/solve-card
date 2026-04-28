@@ -56,6 +56,15 @@ export function Result({ result, onRetry, onHome }: ResultProps) {
                 <p className="body" style={{ color: "var(--charcoal)", fontWeight: 600 }}>
                   {log.prompt}
                 </p>
+                {log.imageUrl && (
+                  <figure className="question-figure question-figure-sm">
+                    <img
+                      src={`${import.meta.env.BASE_URL}${log.imageUrl}`}
+                      alt="문제 이미지"
+                      loading="lazy"
+                    />
+                  </figure>
+                )}
                 <p className="caption">
                   내 답:{" "}
                   {log.selectedIndex >= 0

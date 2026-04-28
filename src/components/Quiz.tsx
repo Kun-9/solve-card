@@ -66,6 +66,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
         correct: selected === q.answerIndex,
         explanation: q.explanation,
         section: q.section,
+        imageUrl: q.imageUrl,
       };
     });
     const correct = logs.filter((l) => l.correct).length;
@@ -148,6 +149,16 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
           {current.prompt}
         </h2>
 
+        {current.imageUrl && (
+          <figure className="question-figure">
+            <img
+              src={`${import.meta.env.BASE_URL}${current.imageUrl}`}
+              alt="문제 이미지"
+              loading="lazy"
+            />
+          </figure>
+        )}
+
         <div className="choice-list">
           {current.choices.map((choice, i) => (
             <ChoiceButton
@@ -190,6 +201,7 @@ function ChoiceButton({
   onSelect,
 }: ChoiceButtonProps) {
   const state = computeChoiceState(index, attempt, answerIndex);
+  const isEmpty = text.trim().length === 0;
   return (
     <button
       type="button"
@@ -199,7 +211,9 @@ function ChoiceButton({
       onClick={onSelect}
     >
       <span className="choice-key">{letterFor(index)}</span>
-      <span className="choice-text">{text}</span>
+      <span className="choice-text" data-empty={isEmpty || undefined}>
+        {isEmpty ? "이미지 보기" : text}
+      </span>
     </button>
   );
 }

@@ -15,15 +15,12 @@ interface AttemptState {
   revealed: boolean;
 }
 
-const SWIPE_THRESHOLD = 60;
-
 export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) {
   const [index, setIndex] = useState(0);
   const [attempts, setAttempts] = useState<AttemptState[]>(() =>
     round.questions.map(() => ({ selectedIndex: null, revealed: false })),
   );
   const startedAt = useRef<number>(Date.now());
-  const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
   const total = round.questions.length;
   const current = round.questions[index];
@@ -174,28 +171,6 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, attempt.revealed, current.choices.length]);
 
-  // 모바일 좌/우 스와이프
-  function onTouchStart(e: React.TouchEvent) {
-    const t = e.touches[0];
-    swipeStart.current = { x: t.clientX, y: t.clientY };
-  }
-  function onTouchEnd(e: React.TouchEvent) {
-    const start = swipeStart.current;
-    swipeStart.current = null;
-    if (!start) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
-    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
-    if (dx < 0) {
-      // 왼쪽으로 스와이프 → 다음/스킵
-      if (attempt.revealed) next();
-      else skip();
-    } else {
-      prev();
-    }
-  }
-
   const rightLabel = isLast
     ? "결과 보기"
     : attempt.revealed
@@ -204,11 +179,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
   const rightPrimary = attempt.revealed || isLast;
 
   return (
-    <div
-      className="quiz-shell"
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-    >
+    <div className="quiz-shell">
       <header className="quiz-header">
         <button
           type="button"

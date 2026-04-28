@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AnswerLog, Round, RoundResult } from "../types";
-import { letterFor, resolveImageUrl } from "../lib/utils";
+import { choiceLabel, resolveImageUrl } from "../lib/utils";
 
 interface QuizProps {
   round: Round;
@@ -232,7 +232,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
         {attempt.revealed && (
           <Feedback
             correct={attempt.selectedIndex === current.answerIndex}
-            answerLetter={letterFor(current.answerIndex)}
+            answerLetter={choiceLabel(current.answerIndex)}
             answerText={current.choices[current.answerIndex]}
             explanation={current.explanation}
           />
@@ -308,7 +308,7 @@ function ChoiceButton({
       disabled={attempt.revealed}
       onClick={onSelect}
     >
-      <span className="choice-key">{letterFor(index)}</span>
+      <span className="choice-key">{choiceLabel(index)}</span>
       <span className="choice-body">
         {!isTextEmpty && <span className="choice-text">{text}</span>}
         {imageUrl && (

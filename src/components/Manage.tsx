@@ -6,7 +6,7 @@ import {
   resetToSeed,
   resyncRemoteBank,
 } from "../data/storage";
-import { letterFor, readImageAsDataUrl, resolveImageUrl, uid } from "../lib/utils";
+import { choiceLabel, readImageAsDataUrl, resolveImageUrl, uid } from "../lib/utils";
 
 interface ManageProps {
   bank: QuestionBank;
@@ -419,17 +419,17 @@ function QuestionEditor({
                   name={`answer-${question.id}`}
                   checked={question.answerIndex === i}
                   onChange={() => onPatch({ answerIndex: i })}
-                  aria-label={`${letterFor(i)} 보기를 정답으로 선택`}
+                  aria-label={`${choiceLabel(i)} 보기를 정답으로 선택`}
                 />
                 <span className="caption" style={{ minWidth: 18 }}>
-                  {letterFor(i)}
+                  {choiceLabel(i)}
                 </span>
               </label>
               <input
                 className="input"
                 value={choice}
                 onChange={(e) => patchChoice(i, e.target.value)}
-                placeholder={`보기 ${letterFor(i)}`}
+                placeholder={`보기 ${choiceLabel(i)}`}
               />
               <ChoiceImageButton
                 imageUrl={question.choiceImageUrls?.[i] ?? undefined}

@@ -1,5 +1,5 @@
 import type { RoundResult } from "../types";
-import { formatDuration, letterFor, resolveImageUrl } from "../lib/utils";
+import { formatDuration, choiceLabel, resolveImageUrl } from "../lib/utils";
 
 interface ResultProps {
   result: RoundResult;
@@ -66,7 +66,7 @@ export function Result({ result, onRetry, onHome }: ResultProps) {
                     {log.choiceImageUrls.map((url, i) =>
                       url ? (
                         <span key={i} className="choice-image-thumb-tag">
-                          <span className="caption">{letterFor(i)}</span>
+                          <span className="caption">{choiceLabel(i)}</span>
                           <img src={resolveImageUrl(url)} alt="" loading="lazy" />
                         </span>
                       ) : null,
@@ -76,11 +76,11 @@ export function Result({ result, onRetry, onHome }: ResultProps) {
                 <p className="caption">
                   내 답:{" "}
                   {log.selectedIndex >= 0
-                    ? `${letterFor(log.selectedIndex)}. ${log.choices[log.selectedIndex]}`
+                    ? `${choiceLabel(log.selectedIndex)}. ${log.choices[log.selectedIndex]}`
                     : "선택하지 않음"}
                 </p>
                 <p className="caption" style={{ color: "var(--correct)" }}>
-                  정답: {letterFor(log.answerIndex)}. {log.choices[log.answerIndex]}
+                  정답: {choiceLabel(log.answerIndex)}. {log.choices[log.answerIndex]}
                 </p>
                 {log.explanation && <p className="body">{log.explanation}</p>}
               </article>

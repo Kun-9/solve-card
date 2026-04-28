@@ -31,8 +31,8 @@ export function formatDuration(ms: number): string {
   return `${m}분 ${s.toString().padStart(2, "0")}초`;
 }
 
-export function letterFor(index: number): string {
-  return String.fromCharCode(65 + index);
+export function choiceLabel(index: number): string {
+  return String(index + 1);
 }
 
 /**

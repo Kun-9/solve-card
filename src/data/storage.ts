@@ -4,6 +4,7 @@ import type {
   RoundResult,
   ScoreHistory,
   SubjectMeta,
+  TrackMeta,
 } from "../types";
 import { SEED_BANK } from "./seed";
 
@@ -18,14 +19,17 @@ const roundUrl = (id: string) =>
 
 interface ManifestEntry {
   id: string;
+  trackId?: string;
   category?: string;
   title: string;
   description?: string;
   questionCount: number;
   version?: string;
+  date?: string;
 }
 interface Manifest {
   rounds: ManifestEntry[];
+  tracks?: TrackMeta[];
   subjects?: SubjectMeta[];
   updatedAt?: string;
 }
@@ -87,11 +91,14 @@ function metaBankFromManifest(manifest: Manifest): QuestionBank {
   return {
     rounds: manifest.rounds.map((entry) => ({
       id: entry.id,
+      trackId: entry.trackId,
       title: entry.title,
       description: entry.description,
       questions: [],
       questionCount: entry.questionCount,
+      date: entry.date,
     })),
+    tracks: manifest.tracks,
     subjects: manifest.subjects,
     updatedAt: manifest.updatedAt ?? "",
   };
@@ -101,11 +108,14 @@ function manifestFromBank(bank: QuestionBank, version: string): Manifest {
   return {
     rounds: bank.rounds.map((r) => ({
       id: r.id,
+      trackId: r.trackId,
       title: r.title,
       description: r.description,
       questionCount: r.questionCount ?? r.questions.length,
       version,
+      date: r.date,
     })),
+    tracks: bank.tracks,
     subjects: bank.subjects,
     updatedAt: bank.updatedAt || version,
   };
@@ -168,6 +178,16 @@ export async function loadBankAsync(): Promise<QuestionBank> {
   return metaBankFromManifest(seedManifest);
 }
 
+/** 회차 본문에 manifest 메타(trackId/date)를 머지한다. */
+function mergeRoundMeta(round: Round, entry?: ManifestEntry): Round {
+  if (!entry) return round;
+  return {
+    ...round,
+    trackId: round.trackId ?? entry.trackId,
+    date: round.date ?? entry.date,
+  };
+}
+
 export async function ensureRound(id: string): Promise<Round | null> {
   if (!isBrowser) {
     return SEED_BANK.rounds.find((r) => r.id === id) ?? null;
@@ -183,16 +203,16 @@ export async function ensureRound(id: string): Promise<Round | null> {
       !expectedVersion ||
       cached.version === expectedVersion
     ) {
-      return cached.round;
+      return mergeRoundMeta(cached.round, entry);
     }
   }
 
   const remote = await fetchRound(id);
   if (remote) {
     writeRoundCache(id, remote, expectedVersion || "");
-    return remote;
+    return mergeRoundMeta(remote, entry);
   }
-  return cached?.round ?? null;
+  return cached?.round ? mergeRoundMeta(cached.round, entry) : null;
 }
 
 export async function ensureAllRounds(): Promise<QuestionBank> {
@@ -210,16 +230,19 @@ export async function ensureAllRounds(): Promise<QuestionBank> {
         r ??
         ({
           id: entry.id,
+          trackId: entry.trackId,
           title: entry.title,
           description: entry.description,
           questions: [],
           questionCount: entry.questionCount,
+          date: entry.date,
         } as Round)
       );
     }),
   );
   return {
     rounds,
+    tracks: meta.tracks,
     subjects: meta.subjects,
     updatedAt: meta.updatedAt ?? "",
   };
@@ -233,11 +256,14 @@ export function saveBank(bank: QuestionBank): void {
   const manifest: Manifest = {
     rounds: bank.rounds.map((r) => ({
       id: r.id,
+      trackId: r.trackId,
       title: r.title,
       description: r.description,
       questionCount: r.questionCount ?? r.questions.length,
       version: USER_VERSION,
+      date: r.date,
     })),
+    tracks: bank.tracks,
     subjects: bank.subjects,
     updatedAt: USER_VERSION,
   };

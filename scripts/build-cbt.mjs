@@ -34,6 +34,12 @@ const TITLE_BY_PREFIX = {
   ic: "정보통신기사 필기",
 };
 
+/** roundId prefix → 트랙 메타. Cert 트랙은 회차 단위. */
+const TRACK_BY_PREFIX = {
+  iz: { id: "izeng", domain: "cert", title: "정보처리기사", description: "필기 기출 회차" },
+  ic: { id: "iccom", domain: "cert", title: "정보통신기사", description: "필기 기출 회차" },
+};
+
 function parseDateFromRoundId(roundId) {
   const m = roundId.match(/^[a-z]+(\d{4})(\d{2})(\d{2})$/);
   if (!m) return roundId;
@@ -43,6 +49,11 @@ function parseDateFromRoundId(roundId) {
 function categoryFromRoundId(roundId) {
   const m = roundId.match(/^([a-z]+)/);
   return m ? m[1] : "rd";
+}
+
+function trackIdFromRoundId(roundId) {
+  const prefix = categoryFromRoundId(roundId);
+  return TRACK_BY_PREFIX[prefix]?.id;
 }
 
 function hashRoundPayload(round) {
@@ -154,6 +165,8 @@ function convertFile(file) {
 
   return {
     id: data.round_id,
+    trackId: trackIdFromRoundId(data.round_id),
+    date: dateLabel,
     title: `${titleBase} · ${dateLabel}`,
     description: `${dateLabel} 회차 · ${questions.length}문항`,
     questions,
@@ -207,10 +220,20 @@ function main() {
     versions.set(round.id, hashRoundPayload(round));
   }
 
+  const tracksUsed = new Map();
+  for (const r of rounds) {
+    const prefix = categoryFromRoundId(r.id);
+    const meta = TRACK_BY_PREFIX[prefix];
+    if (meta && !tracksUsed.has(meta.id)) tracksUsed.set(meta.id, meta);
+  }
+
   const manifest = {
+    tracks: [...tracksUsed.values()],
     rounds: rounds.map((r) => ({
       id: r.id,
+      trackId: r.trackId,
       category: categoryFromRoundId(r.id),
+      date: r.date,
       title: r.title,
       description: r.description,
       questionCount: r.questions.length,

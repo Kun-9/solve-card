@@ -13,7 +13,16 @@ dist
 .omc
 .claude
 .codex
+.superpowers
 *.log
+
+# brainstorming/플래닝 산출물 (사용자 정책: git 미반영)
+docs/superpowers
+
+# CBT 데이터 가공/검수 일회성 스크립트 (로컬에서만 사용)
+scripts/enrich-*.mjs
+scripts/normalize-*.mjs
+scripts/review-*.mjs
 
 # crawler / data prep (앱 런타임에는 변환된 public/data/cbt.json만 사용)
 cbtbank

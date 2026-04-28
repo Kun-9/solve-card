@@ -125,11 +125,6 @@ export function Home({
           >
             {subjectFilter === ALL ? "전체 랜덤" : `${subjectFilter} 랜덤`}
           </button>
-          {import.meta.env.DEV && (
-            <button type="button" className="btn btn-ghost btn-lg" onClick={onManage}>
-              문제 관리
-            </button>
-          )}
         </div>
       </section>
 

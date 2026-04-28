@@ -53,6 +53,19 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
     setIndex((i) => i + 1);
   }
 
+  function skip() {
+    if (isLast) {
+      finalize();
+      return;
+    }
+    setIndex((i) => i + 1);
+  }
+
+  function prev() {
+    if (index === 0) return;
+    setIndex((i) => i - 1);
+  }
+
   function finalize() {
     const logs: AnswerLog[] = round.questions.map((q, i) => {
       const a = attempts[i];
@@ -179,6 +192,40 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
           />
         )}
       </article>
+
+      <div className="quiz-footer">
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={prev}
+          disabled={index === 0}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M15 18l-6-6 6-6"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          이전 문제
+        </button>
+        {!attempt.revealed && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={skip}>
+            건너뛰기
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M9 6l6 6-6 6"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -524,6 +524,23 @@ main {
   box-shadow: none;
 }
 
+.quiz-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quiz-footer .btn {
+  color: var(--muted);
+  border-color: var(--hairline);
+}
+
+.quiz-footer .btn:hover:not(:disabled) {
+  color: var(--charcoal);
+  border-color: var(--hairline-strong);
+}
+
 @media (max-width: 640px) {
   .quiz-header {
     top: 54px;

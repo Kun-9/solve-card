@@ -5,8 +5,10 @@ export interface Question {
   answerIndex: number;
   explanation?: string;
   section?: string;
-  /** public 폴더 기준 상대 경로. 렌더 시 BASE_URL과 결합한다. */
+  /** 문제 본문 이미지. public 상대 경로 또는 dataURL. */
   imageUrl?: string;
+  /** 보기별 이미지. choices와 같은 인덱스. 비어있으면 이미지 없음. */
+  choiceImages?: (string | undefined)[];
 }
 
 export interface Round {
@@ -31,6 +33,7 @@ export interface AnswerLog {
   explanation?: string;
   section?: string;
   imageUrl?: string;
+  choiceImages?: (string | undefined)[];
 }
 
 export interface RoundResult {

@@ -67,6 +67,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
         explanation: q.explanation,
         section: q.section,
         imageUrl: q.imageUrl,
+        choiceImages: q.choiceImages,
       };
     });
     const correct = logs.filter((l) => l.correct).length;
@@ -161,6 +162,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
               key={i}
               index={i}
               text={choice}
+              imageUrl={current.choiceImages?.[i]}
               attempt={attempt}
               answerIndex={current.answerIndex}
               onSelect={() => selectChoice(i)}
@@ -184,6 +186,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
 interface ChoiceButtonProps {
   index: number;
   text: string;
+  imageUrl?: string;
   attempt: AttemptState;
   answerIndex: number;
   onSelect: () => void;
@@ -192,12 +195,14 @@ interface ChoiceButtonProps {
 function ChoiceButton({
   index,
   text,
+  imageUrl,
   attempt,
   answerIndex,
   onSelect,
 }: ChoiceButtonProps) {
   const state = computeChoiceState(index, attempt, answerIndex);
-  const isEmpty = text.trim().length === 0;
+  const isTextEmpty = text.trim().length === 0;
+  const showPlaceholder = isTextEmpty && !imageUrl;
   return (
     <button
       type="button"
@@ -207,8 +212,18 @@ function ChoiceButton({
       onClick={onSelect}
     >
       <span className="choice-key">{letterFor(index)}</span>
-      <span className="choice-text" data-empty={isEmpty || undefined}>
-        {isEmpty ? "이미지 보기" : text}
+      <span className="choice-body">
+        {!isTextEmpty && <span className="choice-text">{text}</span>}
+        {imageUrl && (
+          <span className="choice-image">
+            <img src={resolveImageUrl(imageUrl)} alt="" loading="lazy" />
+          </span>
+        )}
+        {showPlaceholder && (
+          <span className="choice-text" data-empty>
+            (보기 없음)
+          </span>
+        )}
       </span>
     </button>
   );

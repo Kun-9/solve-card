@@ -412,7 +412,7 @@ function QuestionEditor({
         <label className="field-label">보기 (정답을 라디오로 선택)</label>
         <div className="stack" style={{ gap: 8 }}>
           {question.choices.map((choice, i) => (
-            <div key={i} className="row" style={{ gap: 10 }}>
+            <div key={i} className="choice-edit-row">
               <label className="row" style={{ gap: 6 }}>
                 <input
                   type="radio"
@@ -430,6 +430,15 @@ function QuestionEditor({
                 value={choice}
                 onChange={(e) => patchChoice(i, e.target.value)}
                 placeholder={`보기 ${letterFor(i)}`}
+              />
+              <ChoiceImageButton
+                imageUrl={question.choiceImages?.[i]}
+                onChange={(url) => {
+                  const next = (question.choiceImages ?? question.choices.map(() => undefined)).slice();
+                  next[i] = url;
+                  const allEmpty = next.every((v) => !v);
+                  onPatch({ choiceImages: allEmpty ? undefined : next });
+                }}
               />
             </div>
           ))}
@@ -451,6 +460,91 @@ function QuestionEditor({
         />
       </div>
     </article>
+  );
+}
+
+interface ChoiceImageButtonProps {
+  imageUrl?: string;
+  onChange: (url: string | undefined) => void;
+}
+
+function ChoiceImageButton({ imageUrl, onChange }: ChoiceImageButtonProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string>("");
+
+  async function handleFile(file: File) {
+    setError("");
+    try {
+      const dataUrl = await readImageAsDataUrl(file);
+      onChange(dataUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "이미지 추가 실패");
+    }
+  }
+
+  return (
+    <div className="choice-image-button">
+      {imageUrl ? (
+        <>
+          <button
+            type="button"
+            className="choice-image-thumb"
+            onClick={() => inputRef.current?.click()}
+            title={error || "클릭해서 교체"}
+          >
+            <img src={resolveImageUrl(imageUrl)} alt="" />
+          </button>
+          <button
+            type="button"
+            className="choice-image-remove"
+            onClick={() => onChange(undefined)}
+            aria-label="보기 이미지 제거"
+            title="제거"
+          >
+            ×
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-cream btn-sm choice-image-add"
+          onClick={() => inputRef.current?.click()}
+          title={error || "보기에 이미지 추가"}
+          aria-label="보기 이미지 추가"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <rect
+              x="3"
+              y="5"
+              width="18"
+              height="14"
+              rx="2"
+              stroke="currentColor"
+              strokeWidth="1.6"
+            />
+            <circle cx="8.5" cy="10.5" r="1.5" fill="currentColor" />
+            <path
+              d="M21 16l-5-5-9 9"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+          e.target.value = "";
+        }}
+      />
+    </div>
   );
 }
 

@@ -61,6 +61,18 @@ export function Result({ result, onRetry, onHome }: ResultProps) {
                     <img src={resolveImageUrl(log.imageUrl)} alt="문제 이미지" loading="lazy" />
                   </figure>
                 )}
+                {log.choiceImages?.some((u) => u) && (
+                  <div className="choice-image-thumb-row">
+                    {log.choiceImages.map((url, i) =>
+                      url ? (
+                        <span key={i} className="choice-image-thumb-tag">
+                          <span className="caption">{letterFor(i)}</span>
+                          <img src={resolveImageUrl(url)} alt="" loading="lazy" />
+                        </span>
+                      ) : null,
+                    )}
+                  </div>
+                )}
                 <p className="caption">
                   내 답:{" "}
                   {log.selectedIndex >= 0

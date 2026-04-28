@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { QuestionBank, Round, RoundResult } from "./types";
+import type { QuestionBank, Round, RoundResult, TrackMeta } from "./types";
 import {
   appendResult,
   ensureAllRounds,
@@ -8,7 +8,8 @@ import {
   loadHistory,
   saveBank,
 } from "./data/storage";
-import { Home } from "./components/Home";
+import { HomeHub } from "./components/HomeHub";
+import { CertTrackScreen } from "./components/CertTrackScreen";
 import { Quiz } from "./components/Quiz";
 import { Result } from "./components/Result";
 import { Manage } from "./components/Manage";
@@ -17,6 +18,7 @@ import { shuffle } from "./lib/utils";
 
 type Route =
   | { name: "home" }
+  | { name: "cert"; trackId: string }
   | { name: "quiz"; round: Round; mode: "ordered" | "random"; sourceLabel: string }
   | { name: "result"; result: RoundResult }
   | { name: "manage" };
@@ -85,6 +87,15 @@ export function App() {
     setRoute({ name: "manage" });
   }, [requestExitQuiz]);
 
+  const goTrack = useCallback(
+    (track: TrackMeta) => {
+      if (track.domain !== "cert") return; // Dev 트랙은 Phase 2 에서 라우팅 추가
+      if (!requestExitQuiz()) return;
+      setRoute({ name: "cert", trackId: track.id });
+    },
+    [requestExitQuiz],
+  );
+
   const startRound = useCallback(async (meta: Round, shuffled = false) => {
     const full = await ensureRound(meta.id);
     if (!full || full.questions.length === 0) return;
@@ -98,9 +109,12 @@ export function App() {
   }, []);
 
   const startRandom = useCallback(
-    async (subjectKey?: string) => {
+    async (subjectKey?: string, trackId?: string) => {
       const full = await ensureAllRounds();
-      const all = full.rounds.flatMap((r) => r.questions);
+      const scopedRounds = trackId
+        ? full.rounds.filter((r) => r.trackId === trackId)
+        : full.rounds;
+      const all = scopedRounds.flatMap((r) => r.questions);
       const pool = subjectKey
         ? all.filter((q) => q.section?.startsWith(subjectKey))
         : all;
@@ -109,9 +123,16 @@ export function App() {
         0,
         Math.min(RANDOM_POOL_SIZE, pool.length),
       );
-      const label = subjectKey ? `${subjectKey} 랜덤` : "전체 랜덤";
+      const trackTitle = trackId
+        ? (full.tracks?.find((t) => t.id === trackId)?.title ?? trackId)
+        : null;
+      const subjectPart = subjectKey ?? "전체";
+      const label = trackTitle
+        ? `${trackTitle} · ${subjectPart} 랜덤`
+        : `${subjectPart} 랜덤`;
       const round: Round = {
-        id: `random-${subjectKey ?? "all"}-${Date.now()}`,
+        id: `random-${trackId ?? "all"}-${subjectKey ?? "all"}-${Date.now()}`,
+        trackId,
         title: label,
         description: `${pool.length}문제 중 ${picked.length}문제를 무작위로 출제합니다.`,
         questions: picked,
@@ -169,12 +190,21 @@ export function App() {
       <main>
         <div className="container">
           {route.name === "home" && (
-            <Home
+            <HomeHub
+              bank={bank}
+              onSelectTrack={goTrack}
+              onManage={goManage}
+            />
+          )}
+          {route.name === "cert" && (
+            <CertTrackScreen
               bank={bank}
               history={history}
+              trackId={route.trackId}
               totalQuestions={totalQuestions}
               onStartRound={(round, shuffled) => startRound(round, shuffled)}
               onStartRandom={startRandom}
+              onSelectTrack={goTrack}
               onManage={goManage}
             />
           )}

@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
-import type { QuestionBank, Round, ScoreHistory } from "../types";
+import type { QuestionBank, Round, ScoreHistory, TrackMeta } from "../types";
 
-interface HomeProps {
+interface CertTrackScreenProps {
   bank: QuestionBank;
   history: ScoreHistory;
+  trackId: string;
   totalQuestions: number;
   onStartRound: (round: Round, shuffled: boolean) => void;
-  onStartRandom: (subjectKey?: string) => void;
+  onStartRandom: (subjectKey: string | undefined, trackId: string) => void;
+  onSelectTrack: (track: TrackMeta) => void;
   onManage: () => void;
 }
 
@@ -15,6 +17,7 @@ const YEAR_RE = /(\d{4})-(\d{2})-(\d{2})/;
 const SUBJECT_RE = /^(\d+과목)/;
 
 function extractDateLabel(round: Round): string | null {
+  if (round.date) return round.date;
   const m = round.title.match(YEAR_RE) ?? round.id.match(/(\d{4})(\d{2})(\d{2})/);
   if (!m) return null;
   return `${m[1]}-${m[2]}-${m[3]}`;
@@ -25,30 +28,54 @@ function extractYear(label: string | null): string | null {
   return label.slice(0, 4);
 }
 
-export function Home({
+export function CertTrackScreen({
   bank,
   history,
-  totalQuestions,
+  trackId,
   onStartRound,
   onStartRandom,
+  onSelectTrack,
   onManage,
-}: HomeProps) {
-  const hasContent = totalQuestions > 0;
+}: CertTrackScreenProps) {
+  const tracksInDomain = useMemo<TrackMeta[]>(() => {
+    if (bank.tracks && bank.tracks.length > 0) {
+      return bank.tracks.filter((t) => t.domain === "cert");
+    }
+    return [];
+  }, [bank]);
+
+  const activeTrack =
+    tracksInDomain.find((t) => t.id === trackId) ??
+    ({ id: trackId, domain: "cert", title: trackId } as TrackMeta);
+
+  const trackRounds = useMemo(
+    () => bank.rounds.filter((r) => r.trackId === trackId),
+    [bank, trackId],
+  );
+
+  const trackQuestionTotal = useMemo(
+    () =>
+      trackRounds.reduce(
+        (sum, r) => sum + (r.questionCount ?? r.questions.length),
+        0,
+      ),
+    [trackRounds],
+  );
 
   const dateMap = useMemo(() => {
     const map = new Map<string, string | null>();
-    bank.rounds.forEach((r) => map.set(r.id, extractDateLabel(r)));
+    trackRounds.forEach((r) => map.set(r.id, extractDateLabel(r)));
     return map;
-  }, [bank]);
+  }, [trackRounds]);
 
   const years = useMemo(() => {
     const set = new Set<string>();
-    bank.rounds.forEach((r) => {
+    trackRounds.forEach((r) => {
       const y = extractYear(dateMap.get(r.id) ?? null);
       if (y) set.add(y);
     });
     return [...set].sort();
-  }, [bank, dateMap]);
+  }, [trackRounds, dateMap]);
 
   const [yearFilter, setYearFilter] = useState<string>(ALL);
   const [subjectFilter, setSubjectFilter] = useState<string>(ALL);
@@ -59,7 +86,7 @@ export function Home({
       return bank.subjects.map((s) => ({ key: s.key, fullLabel: s.fullLabel }));
     }
     const map = new Map<string, string>();
-    bank.rounds.forEach((r) => {
+    trackRounds.forEach((r) => {
       r.questions.forEach((q) => {
         if (!q.section) return;
         const m = q.section.match(SUBJECT_RE);
@@ -71,36 +98,58 @@ export function Home({
     return [...map.entries()]
       .map(([key, fullLabel]) => ({ key, fullLabel }))
       .sort((a, b) => a.key.localeCompare(b.key, "ko"));
-  }, [bank]);
+  }, [bank, trackRounds]);
 
   const filtered = useMemo(() => {
-    if (yearFilter === ALL) return bank.rounds;
-    return bank.rounds.filter(
+    if (yearFilter === ALL) return trackRounds;
+    return trackRounds.filter(
       (r) => extractYear(dateMap.get(r.id) ?? null) === yearFilter,
     );
-  }, [bank, dateMap, yearFilter]);
+  }, [trackRounds, dateMap, yearFilter]);
 
   const subjectCount = useMemo(() => {
-    if (subjectFilter === ALL) return totalQuestions;
+    if (subjectFilter === ALL) return trackQuestionTotal;
     if (bank.subjects) {
       return bank.subjects.find((s) => s.key === subjectFilter)?.count ?? 0;
     }
     let n = 0;
-    bank.rounds.forEach((r) => {
+    trackRounds.forEach((r) => {
       r.questions.forEach((q) => {
         const m = q.section?.match(SUBJECT_RE);
         if (m && m[1] === subjectFilter) n += 1;
       });
     });
     return n;
-  }, [bank, subjectFilter, totalQuestions]);
+  }, [bank, trackRounds, subjectFilter, trackQuestionTotal]);
+
+  const hasContent = trackRounds.length > 0;
 
   return (
     <div className="stack-xl stack">
       <section className="stack" style={{ gap: 16 }}>
-        <h1 className="h-display">오늘도 한 장씩.</h1>
+        {tracksInDomain.length > 1 && (
+          <div className="chip-row" role="radiogroup" aria-label="자격증 트랙">
+            {tracksInDomain.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className="btn-pill"
+                role="radio"
+                aria-checked={t.id === trackId}
+                aria-pressed={t.id === trackId}
+                onClick={() => {
+                  if (t.id !== trackId) onSelectTrack(t);
+                }}
+              >
+                {t.title}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <h1 className="h-display">{activeTrack.title}</h1>
         <p className="body-lg">
-          {bank.rounds.length}개 회차 · {totalQuestions}문제
+          {trackRounds.length}개 회차 · {trackQuestionTotal}문제
         </p>
 
         {subjects.length > 0 && (
@@ -136,7 +185,10 @@ export function Home({
           type="button"
           className="random-card"
           onClick={() =>
-            onStartRandom(subjectFilter === ALL ? undefined : subjectFilter)
+            onStartRandom(
+              subjectFilter === ALL ? undefined : subjectFilter,
+              trackId,
+            )
           }
           disabled={!hasContent}
         >
@@ -206,7 +258,7 @@ export function Home({
           </button>
         </div>
 
-        {bank.rounds.length === 0 ? (
+        {trackRounds.length === 0 ? (
           <div className="card empty">
             <p className="body">아직 등록된 회차가 없어요.</p>
             <button

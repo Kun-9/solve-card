@@ -1,5 +1,5 @@
 import type { RoundResult } from "../types";
-import { formatDuration, letterFor } from "../lib/utils";
+import { formatDuration, letterFor, resolveImageUrl } from "../lib/utils";
 
 interface ResultProps {
   result: RoundResult;
@@ -58,11 +58,7 @@ export function Result({ result, onRetry, onHome }: ResultProps) {
                 </p>
                 {log.imageUrl && (
                   <figure className="question-figure question-figure-sm">
-                    <img
-                      src={`${import.meta.env.BASE_URL}${log.imageUrl}`}
-                      alt="문제 이미지"
-                      loading="lazy"
-                    />
+                    <img src={resolveImageUrl(log.imageUrl)} alt="문제 이미지" loading="lazy" />
                   </figure>
                 )}
                 <p className="caption">

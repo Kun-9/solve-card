@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AnswerLog, Round, RoundResult } from "../types";
-import { letterFor } from "../lib/utils";
+import { letterFor, resolveImageUrl } from "../lib/utils";
 
 interface QuizProps {
   round: Round;
@@ -151,11 +151,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
 
         {current.imageUrl && (
           <figure className="question-figure">
-            <img
-              src={`${import.meta.env.BASE_URL}${current.imageUrl}`}
-              alt="문제 이미지"
-              loading="lazy"
-            />
+            <img src={resolveImageUrl(current.imageUrl)} alt="문제 이미지" loading="lazy" />
           </figure>
         )}
 

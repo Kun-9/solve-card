@@ -6,7 +6,7 @@ import {
   resetToSeed,
   resyncRemoteBank,
 } from "../data/storage";
-import { letterFor, uid } from "../lib/utils";
+import { letterFor, readImageAsDataUrl, resolveImageUrl, uid } from "../lib/utils";
 
 interface ManageProps {
   bank: QuestionBank;
@@ -409,6 +409,11 @@ function QuestionEditor({
         </div>
       </div>
 
+      <ImageField
+        imageUrl={question.imageUrl}
+        onChange={(url) => onPatch({ imageUrl: url })}
+      />
+
       <div className="field">
         <label className="field-label">해설 (선택)</label>
         <textarea
@@ -419,5 +424,76 @@ function QuestionEditor({
         />
       </div>
     </article>
+  );
+}
+
+interface ImageFieldProps {
+  imageUrl?: string;
+  onChange: (url: string | undefined) => void;
+}
+
+function ImageField({ imageUrl, onChange }: ImageFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string>("");
+
+  async function handleFile(file: File) {
+    setError("");
+    try {
+      const dataUrl = await readImageAsDataUrl(file);
+      onChange(dataUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "이미지 추가에 실패했어요.");
+    }
+  }
+
+  return (
+    <div className="field">
+      <label className="field-label">이미지 (선택)</label>
+      {imageUrl ? (
+        <div className="image-field-preview">
+          <img src={resolveImageUrl(imageUrl)} alt="문제 이미지 미리보기" />
+          <div className="row" style={{ gap: 6 }}>
+            <button
+              type="button"
+              className="btn btn-cream btn-sm"
+              onClick={() => inputRef.current?.click()}
+            >
+              교체
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger btn-sm"
+              onClick={() => {
+                onChange(undefined);
+                setError("");
+              }}
+            >
+              제거
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="image-field-empty"
+          onClick={() => inputRef.current?.click()}
+        >
+          이미지 추가
+          <span className="caption">PNG · JPG · 최대 1.5MB</span>
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+          e.target.value = "";
+        }}
+      />
+      {error && <span className="caption" style={{ color: "var(--wrong)" }}>{error}</span>}
+    </div>
   );
 }

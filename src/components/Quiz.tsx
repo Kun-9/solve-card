@@ -9,6 +9,7 @@ interface QuizProps {
   sourceLabel: string;
   onFinish: (result: RoundResult) => void;
   onExit: () => void;
+  onAttemptedChange?: (attempted: boolean) => void;
 }
 
 interface AttemptState {
@@ -16,7 +17,7 @@ interface AttemptState {
   revealed: boolean;
 }
 
-export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) {
+export function Quiz({ round, mode, sourceLabel, onFinish, onExit, onAttemptedChange }: QuizProps) {
   const [index, setIndex] = useState(0);
   const [attempts, setAttempts] = useState<AttemptState[]>(() =>
     round.questions.map(() => ({ selectedIndex: null, revealed: false })),
@@ -35,22 +36,36 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
   const attemptsRef = useRef(attempts);
   attemptsRef.current = attempts;
   const poppedRef = useRef(false);
+  const selfBackRef = useRef(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [index]);
+
+  useEffect(() => {
+    onAttemptedChange?.(attempts.some((a) => a.revealed));
+  }, [attempts, onAttemptedChange]);
+
+  useEffect(() => {
+    return () => onAttemptedChange?.(false);
+  }, [onAttemptedChange]);
 
   // 브라우저 뒤로가기/새로고침/탭 닫기 가드
   useEffect(() => {
     window.history.pushState({ quizGuard: true }, "");
 
     function onPop() {
+      if (selfBackRef.current) {
+        selfBackRef.current = false;
+        return;
+      }
       if (attemptsRef.current.some((a) => a.revealed)) {
         const ok = window.confirm("나가면 진행한 답변이 사라져요. 그만두시겠어요?");
         if (!ok) {
           window.history.pushState({ quizGuard: true }, "");
           return;
         }
+        onAttemptedChange?.(false);
       }
       poppedRef.current = true;
       onExit();
@@ -69,10 +84,11 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
       window.removeEventListener("popstate", onPop);
       window.removeEventListener("beforeunload", onBeforeUnload);
       if (!poppedRef.current && window.history.state?.quizGuard) {
+        selfBackRef.current = true;
         window.history.back();
       }
     };
-  }, [onExit]);
+  }, [onExit, onAttemptedChange]);
 
   function selectChoice(choiceIndex: number) {
     if (attempt.revealed) return;
@@ -136,14 +152,6 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
     onFinish(result);
   }
 
-  function confirmExit() {
-    if (attempts.some((a) => a.revealed)) {
-      const ok = window.confirm("나가면 진행한 답변이 사라져요. 그만두시겠어요?");
-      if (!ok) return;
-    }
-    onExit();
-  }
-
   // 키보드 단축키: ← / → 이동, 1-N으로 보기 선택
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -185,7 +193,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
         <button
           type="button"
           className="quiz-icon-btn"
-          onClick={confirmExit}
+          onClick={onExit}
           aria-label="그만두기"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>

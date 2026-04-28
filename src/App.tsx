@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { QuestionBank, Round, RoundResult } from "./types";
 import { appendResult, loadBankAsync, loadHistory, saveBank } from "./data/storage";
 import { Home } from "./components/Home";
@@ -55,11 +55,28 @@ export function App() {
     setBank(next);
   }, []);
 
-  const goHome = useCallback(() => setRoute({ name: "home" }), []);
+  const quizAttemptedRef = useRef(false);
+
+  const handleQuizAttemptedChange = useCallback((attempted: boolean) => {
+    quizAttemptedRef.current = attempted;
+  }, []);
+
+  const requestExitQuiz = useCallback(() => {
+    if (!quizAttemptedRef.current) return true;
+    const ok = window.confirm("나가면 진행한 답변이 사라져요. 그만두시겠어요?");
+    if (ok) quizAttemptedRef.current = false;
+    return ok;
+  }, []);
+
+  const goHome = useCallback(() => {
+    if (!requestExitQuiz()) return;
+    setRoute({ name: "home" });
+  }, [requestExitQuiz]);
   const goManage = useCallback(() => {
     if (!import.meta.env.DEV) return;
+    if (!requestExitQuiz()) return;
     setRoute({ name: "manage" });
-  }, []);
+  }, [requestExitQuiz]);
 
   const startRound = useCallback((round: Round, shuffled = false) => {
     if (round.questions.length === 0) return;
@@ -155,6 +172,7 @@ export function App() {
               sourceLabel={route.sourceLabel}
               onFinish={finishQuiz}
               onExit={goHome}
+              onAttemptedChange={handleQuizAttemptedChange}
             />
           )}
           {route.name === "result" && (

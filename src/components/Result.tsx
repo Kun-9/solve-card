@@ -61,9 +61,9 @@ export function Result({ result, onRetry, onHome }: ResultProps) {
                     <img src={resolveImageUrl(log.imageUrl)} alt="문제 이미지" loading="lazy" />
                   </figure>
                 )}
-                {log.choiceImages?.some((u) => u) && (
+                {log.choiceImageUrls?.some((u) => u) && (
                   <div className="choice-image-thumb-row">
-                    {log.choiceImages.map((url, i) =>
+                    {log.choiceImageUrls.map((url, i) =>
                       url ? (
                         <span key={i} className="choice-image-thumb-tag">
                           <span className="caption">{letterFor(i)}</span>

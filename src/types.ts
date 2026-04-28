@@ -7,8 +7,8 @@ export interface Question {
   section?: string;
   /** 문제 본문 이미지. public 상대 경로 또는 dataURL. */
   imageUrl?: string;
-  /** 보기별 이미지. choices와 같은 인덱스. 비어있으면 이미지 없음. */
-  choiceImages?: (string | undefined)[];
+  /** 보기별 이미지. choices와 같은 인덱스. 빈 슬롯은 null/undefined. */
+  choiceImageUrls?: (string | null | undefined)[];
 }
 
 export interface Round {
@@ -33,7 +33,7 @@ export interface AnswerLog {
   explanation?: string;
   section?: string;
   imageUrl?: string;
-  choiceImages?: (string | undefined)[];
+  choiceImageUrls?: (string | null | undefined)[];
 }
 
 export interface RoundResult {

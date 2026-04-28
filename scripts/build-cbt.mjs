@@ -78,9 +78,15 @@ function convertFile(file) {
       (typeof q.correct_index === "number" ? q.correct_index : 1) - 1;
     const choices = q.choices.map((c) => String(c.text ?? "").trim());
     const id = q.question_id ?? `${data.round_id}-${q.question_num}`;
-    const imageUrl = q.image_required
+    // 본문 이미지 — image_path가 있으면 항상 복사(기존 image_required 의존 제거)
+    const imageUrl = q.image_path
       ? copyImage(data.round_id, q.image_path)
       : undefined;
+    // 보기 이미지 — choices[i].image_path가 있는 슬롯만 URL, 없으면 null
+    const choiceImageUrls = q.choices.map((c) =>
+      c && c.image_path ? copyImage(data.round_id, c.image_path) : null,
+    );
+    const hasChoiceImage = choiceImageUrls.some((u) => u);
     return {
       id,
       prompt: String(q.question ?? "").trim(),
@@ -89,6 +95,7 @@ function convertFile(file) {
       explanation: pickExplanation(q.explanations),
       section: typeof q.section === "string" ? q.section.trim() : undefined,
       imageUrl,
+      choiceImageUrls: hasChoiceImage ? choiceImageUrls : undefined,
     };
   });
 
@@ -132,9 +139,19 @@ function main() {
     (sum, r) => sum + r.questions.filter((q) => q.imageUrl).length,
     0,
   );
+  const totalChoiceImages = rounds.reduce(
+    (sum, r) =>
+      sum +
+      r.questions.reduce(
+        (n, q) =>
+          n + (Array.isArray(q.choiceImageUrls) ? q.choiceImageUrls.filter(Boolean).length : 0),
+        0,
+      ),
+    0,
+  );
   const sizeKb = (fs.statSync(OUT_FILE).size / 1024).toFixed(1);
   console.log(
-    `[build-cbt] wrote ${rounds.length} rounds · ${totalQuestions} questions · ${totalImages} images · ${sizeKb} KB → ${path.relative(ROOT, OUT_FILE)}`,
+    `[build-cbt] wrote ${rounds.length} rounds · ${totalQuestions} questions · ${totalImages} body img · ${totalChoiceImages} choice img · ${sizeKb} KB → ${path.relative(ROOT, OUT_FILE)}`,
   );
 }
 

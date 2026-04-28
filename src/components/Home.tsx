@@ -80,7 +80,7 @@ export function Home({
   return (
     <div className="stack-xl stack">
       <section className="stack" style={{ gap: 16 }}>
-        <h1 className="h-display">기출, 한 장씩.</h1>
+        <h1 className="h-display">오늘도 한 장씩.</h1>
         <p className="body-lg">
           {bank.rounds.length}개 회차 · {totalQuestions}문제
         </p>

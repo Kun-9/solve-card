@@ -432,12 +432,14 @@ function QuestionEditor({
                 placeholder={`보기 ${letterFor(i)}`}
               />
               <ChoiceImageButton
-                imageUrl={question.choiceImages?.[i]}
+                imageUrl={question.choiceImageUrls?.[i] ?? undefined}
                 onChange={(url) => {
-                  const next = (question.choiceImages ?? question.choices.map(() => undefined)).slice();
-                  next[i] = url;
-                  const allEmpty = next.every((v) => !v);
-                  onPatch({ choiceImages: allEmpty ? undefined : next });
+                  const base = question.choiceImageUrls
+                    ? question.choiceImageUrls.slice()
+                    : question.choices.map(() => null);
+                  base[i] = url ?? null;
+                  const allEmpty = base.every((v) => !v);
+                  onPatch({ choiceImageUrls: allEmpty ? undefined : base });
                 }}
               />
             </div>

@@ -67,7 +67,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
         explanation: q.explanation,
         section: q.section,
         imageUrl: q.imageUrl,
-        choiceImages: q.choiceImages,
+        choiceImageUrls: q.choiceImageUrls,
       };
     });
     const correct = logs.filter((l) => l.correct).length;
@@ -162,7 +162,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit }: QuizProps) 
               key={i}
               index={i}
               text={choice}
-              imageUrl={current.choiceImages?.[i]}
+              imageUrl={current.choiceImageUrls?.[i] ?? undefined}
               attempt={attempt}
               answerIndex={current.answerIndex}
               onSelect={() => selectChoice(i)}

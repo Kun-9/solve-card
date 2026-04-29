@@ -106,19 +106,39 @@ export async function deleteUserRoundOverlay(
 
 /* ──────────────── round_attempts ──────────────── */
 
+/**
+ * RoundResult.logs → questionId → selectedIndex 맵으로 압축.
+ * 미선택(-1)은 제외.
+ */
+function selectionsFromResult(result: RoundResult): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const log of result.logs) {
+    if (log.selectedIndex >= 0) out[log.questionId] = log.selectedIndex;
+  }
+  return out;
+}
+
 export async function fetchAttempts(userId: string): Promise<ScoreHistory> {
   const out: ScoreHistory = {};
   if (!supabase) return out;
   const { data, error } = await supabase
     .from("round_attempts")
-    .select("round_id, answers")
+    .select("round_id, score, total, finished_at")
     .eq("user_id", userId)
     .order("finished_at", { ascending: false });
   if (error || !data) return out;
   for (const row of data) {
-    const result = row.answers as RoundResult | null;
-    if (!result) continue;
     const roundId = row.round_id as string;
+    const result: RoundResult = {
+      roundId,
+      roundTitle: "",
+      total: row.total as number,
+      correct: row.score as number,
+      finishedAt: row.finished_at as string,
+      durationMs: 0,
+      logs: [],
+      mode: "ordered",
+    };
     const list = out[roundId] ?? [];
     list.push(result);
     out[roundId] = list;
@@ -136,7 +156,7 @@ export async function insertAttempt(
     round_id: result.roundId,
     score: result.correct,
     total: result.total,
-    answers: result,
+    selections: selectionsFromResult(result),
     finished_at: result.finishedAt,
   });
 }
@@ -151,7 +171,7 @@ export async function bulkInsertAttempts(
     round_id: r.roundId,
     score: r.correct,
     total: r.total,
-    answers: r,
+    selections: selectionsFromResult(r),
     finished_at: r.finishedAt,
   }));
   await supabase.from("round_attempts").insert(rows);

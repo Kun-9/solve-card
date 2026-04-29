@@ -159,6 +159,57 @@ a {
 .nav {
   display: flex;
   gap: 4px;
+  align-items: center;
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--charcoal-82);
+  border: 1px solid var(--hairline);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  max-width: 200px;
+}
+.user-chip:hover {
+  background: var(--cream-soft);
+  color: var(--charcoal);
+}
+.user-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--charcoal);
+  color: var(--cream-soft);
+  font-size: 11px;
+  font-weight: 600;
+  object-fit: cover;
+}
+.user-avatar-fallback {
+  letter-spacing: 0;
+}
+
+@media (max-width: 480px) {
+  .user-chip-name {
+    display: none;
+  }
+  .user-chip {
+    padding: 4px;
+  }
 }
 
 main {

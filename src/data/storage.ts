@@ -8,6 +8,18 @@ import type {
   TrackMeta,
 } from "../types";
 import { SEED_BANK } from "./seed";
+import {
+  bulkInsertAttempts,
+  fetchAttempts,
+  fetchLegacyHistoryImported,
+  fetchUserManifestOverlay,
+  fetchUserRoundOverlays,
+  insertAttempt,
+  setLegacyHistoryImported,
+  upsertUserManifestOverlay,
+  upsertUserRoundOverlay,
+  type UserManifestPatch,
+} from "./cloud";
 
 const HISTORY_KEY = "solve-card:history:v1";
 const MANIFEST_KEY = "solve-card:manifest:v3";
@@ -44,6 +56,12 @@ interface CachedRound {
 const isBrowser = typeof window !== "undefined" && !!window.localStorage;
 
 let currentManifest: Manifest | null = null;
+let currentUserId: string | null = null;
+
+/** Auth 컨텍스트 주입. App 레벨에서 user 변동 시 호출. */
+export function setAuthUserId(id: string | null): void {
+  currentUserId = id;
+}
 
 function safeParse<T>(raw: string | null): T | null {
   if (!raw) return null;
@@ -147,30 +165,22 @@ async function fetchRound(id: string): Promise<Round | null> {
   }
 }
 
-export async function loadBankAsync(): Promise<QuestionBank> {
-  if (!isBrowser) return SEED_BANK;
-
+/**
+ * 시드 manifest를 가져온다 (원격 우선, 캐시·시드 폴백).
+ * USER_VERSION 보호는 호출자(loadBankAsync)에서 게스트 모드일 때만 적용.
+ */
+async function loadSeedManifest(): Promise<Manifest> {
   const cached = readManifestCache();
-
-  // 사용자가 직접 편집한 manifest는 원격으로 덮지 않음
-  if (cached && cached.updatedAt === USER_VERSION) {
-    currentManifest = cached;
-    return metaBankFromManifest(cached);
-  }
 
   const remote = await fetchManifest();
   if (remote) {
     if (!cached || cached.updatedAt !== remote.updatedAt) {
       writeManifestCache(remote);
     }
-    currentManifest = remote;
-    return metaBankFromManifest(remote);
+    return remote;
   }
 
-  if (cached) {
-    currentManifest = cached;
-    return metaBankFromManifest(cached);
-  }
+  if (cached) return cached;
 
   // 마지막 폴백: 내장 시드 — 회차 캐시까지 채워두면 ensureRound가 즉시 반환
   const seedManifest = manifestFromBank(SEED_BANK, SEED_VERSION);
@@ -178,8 +188,70 @@ export async function loadBankAsync(): Promise<QuestionBank> {
     writeRoundCache(round.id, round, SEED_VERSION);
   }
   writeManifestCache(seedManifest);
-  currentManifest = seedManifest;
-  return metaBankFromManifest(seedManifest);
+  return seedManifest;
+}
+
+/**
+ * 시드 manifest + 사용자 manifest overlay 를 id 기준으로 머지한다.
+ * 충돌 시 사용자 항목 우선.
+ */
+function mergeManifest(base: Manifest, patch: UserManifestPatch | null): Manifest {
+  if (!patch) return base;
+  return {
+    ...base,
+    rounds: mergeById(base.rounds, (patch.rounds ?? []) as ManifestEntry[]),
+    tracks: mergeById(base.tracks ?? [], patch.tracks ?? []),
+    categories: mergeById(base.categories ?? [], patch.categories ?? []),
+    subjects:
+      patch.subjects && patch.subjects.length > 0
+        ? patch.subjects
+        : base.subjects,
+    updatedAt: base.updatedAt,
+  };
+}
+
+function mergeById<T extends { id?: string; key?: string }>(
+  base: T[],
+  patch: T[],
+): T[] {
+  const idOf = (x: T) => x.id ?? x.key ?? "";
+  const map = new Map<string, T>();
+  for (const x of base) map.set(idOf(x), x);
+  for (const x of patch) map.set(idOf(x), x);
+  return Array.from(map.values());
+}
+
+export async function loadBankAsync(): Promise<QuestionBank> {
+  if (!isBrowser) return SEED_BANK;
+
+  // 게스트: 기존 흐름 (USER_VERSION 편집본 보호)
+  if (!currentUserId) {
+    const cached = readManifestCache();
+    if (cached && cached.updatedAt === USER_VERSION) {
+      currentManifest = cached;
+      return metaBankFromManifest(cached);
+    }
+    const seedManifest = await loadSeedManifest();
+    currentManifest = seedManifest;
+    return metaBankFromManifest(seedManifest);
+  }
+
+  // 로그인 사용자: 시드 + cloud overlay 머지
+  const userId = currentUserId;
+  const [seedManifest, userPatch, roundOverlays] = await Promise.all([
+    loadSeedManifest(),
+    fetchUserManifestOverlay(userId),
+    fetchUserRoundOverlays(userId),
+  ]);
+
+  // 사용자 round overlay는 round 캐시에 USER_VERSION으로 박아둬서 ensureRound가 즉시 반환
+  for (const [roundId, round] of roundOverlays) {
+    writeRoundCache(roundId, round, USER_VERSION);
+  }
+
+  const merged = mergeManifest(seedManifest, userPatch);
+  currentManifest = merged;
+  return metaBankFromManifest(merged);
 }
 
 /** 회차 본문에 manifest 메타(trackId/date)를 머지한다. */
@@ -275,6 +347,34 @@ export function saveBank(bank: QuestionBank): void {
   };
   writeManifestCache(manifest);
   currentManifest = manifest;
+
+  // 로그인 사용자: cloud에도 동기화 (fire-and-forget)
+  if (currentUserId) {
+    void syncBankToCloud(currentUserId, bank);
+  }
+}
+
+async function syncBankToCloud(
+  userId: string,
+  bank: QuestionBank,
+): Promise<void> {
+  await Promise.all(
+    bank.rounds.map((r) => upsertUserRoundOverlay(userId, r)),
+  );
+  const patch: UserManifestPatch = {
+    rounds: bank.rounds.map((r) => ({
+      id: r.id,
+      trackId: r.trackId,
+      title: r.title,
+      description: r.description,
+      questionCount: r.questionCount ?? r.questions.length,
+      date: r.date,
+    })),
+    tracks: bank.tracks,
+    categories: bank.categories,
+    subjects: bank.subjects,
+  };
+  await upsertUserManifestOverlay(userId, patch);
 }
 
 export interface SaveToFileResult {
@@ -343,6 +443,35 @@ export function loadHistory(): ScoreHistory {
   return safeParse<ScoreHistory>(localStorage.getItem(HISTORY_KEY)) ?? {};
 }
 
+/** 로그인이면 cloud에서 회차별 최근 20개로 잘라 반환, 게스트는 localStorage. */
+export async function loadHistoryAsync(): Promise<ScoreHistory> {
+  if (!isBrowser) return {};
+  if (!currentUserId) return loadHistory();
+  const cloud = await fetchAttempts(currentUserId);
+  const trimmed: ScoreHistory = {};
+  for (const [rid, list] of Object.entries(cloud)) {
+    trimmed[rid] = list.slice(0, 20);
+  }
+  return trimmed;
+}
+
+/**
+ * 최초 로그인 시 1회: localStorage history → round_attempts 일괄 업로드.
+ * user_flags.legacy_history_imported 가 true면 즉시 반환.
+ */
+export async function migrateLegacyHistoryIfNeeded(
+  userId: string,
+): Promise<void> {
+  const already = await fetchLegacyHistoryImported(userId);
+  if (already) return;
+  const local = loadHistory();
+  const all = Object.values(local).flat();
+  if (all.length > 0) {
+    await bulkInsertAttempts(userId, all);
+  }
+  await setLegacyHistoryImported(userId);
+}
+
 export function appendResult(result: RoundResult): ScoreHistory {
   const history = loadHistory();
   const list = history[result.roundId] ?? [];
@@ -351,6 +480,10 @@ export function appendResult(result: RoundResult): ScoreHistory {
     [result.roundId]: [result, ...list].slice(0, 20),
   };
   if (isBrowser) localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+  // 로그인 시 cloud에도 저장. 실패해도 localStorage는 유효.
+  if (currentUserId) {
+    void insertAttempt(currentUserId, result);
+  }
   return next;
 }
 

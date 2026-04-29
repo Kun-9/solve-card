@@ -12,7 +12,10 @@ import {
   ensureRound,
   loadBankAsync,
   loadHistory,
+  loadHistoryAsync,
+  migrateLegacyHistoryIfNeeded,
   saveBank,
+  setAuthUserId,
 } from "./data/storage";
 import { HomeHub } from "./components/HomeHub";
 import { CertTrackScreen } from "./components/CertTrackScreen";
@@ -23,6 +26,7 @@ import { Result } from "./components/Result";
 import { Manage } from "./components/Manage";
 import { Topbar } from "./components/Topbar";
 import { shuffle } from "./lib/utils";
+import { useAuth } from "./lib/useAuth";
 
 type EntryRoute =
   | { name: "home" }
@@ -52,27 +56,41 @@ const RANDOM_POOL_SIZE = 20;
 const EMPTY_BANK: QuestionBank = { rounds: [], updatedAt: "" };
 
 export function App() {
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
+
   const [bank, setBank] = useState<QuestionBank>(EMPTY_BANK);
   const [history, setHistory] = useState(() => loadHistory());
   const [route, setRoute] = useState<Route>({ name: "home" });
   const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
+    if (authLoading) return;
     let cancelled = false;
-    loadBankAsync()
-      .then((next) => {
+    setAuthUserId(userId);
+    setBootState("loading");
+    (async () => {
+      try {
+        if (userId) {
+          await migrateLegacyHistoryIfNeeded(userId);
+        }
+        const [nextBank, nextHistory] = await Promise.all([
+          loadBankAsync(),
+          loadHistoryAsync(),
+        ]);
         if (cancelled) return;
-        setBank(next);
+        setBank(nextBank);
+        setHistory(nextHistory);
         setBootState("ready");
-      })
-      .catch(() => {
+      } catch {
         if (cancelled) return;
         setBootState("error");
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userId, authLoading]);
 
   useEffect(() => {
     if (route.name !== "home") {

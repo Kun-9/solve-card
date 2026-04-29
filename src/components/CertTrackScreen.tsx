@@ -212,7 +212,7 @@ export function CertTrackScreen({
 
       <section className="stack">
         <div className="row row-between" style={{ gap: 12, flexWrap: "wrap" }}>
-          {years.length > 1 ? (
+          {years.length > 0 ? (
             <div className="chip-row">
               <button
                 type="button"

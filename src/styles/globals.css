@@ -218,6 +218,35 @@ main {
   margin: 0;
 }
 
+.explain-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.diff-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+}
+.diff-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  flex: none;
+}
+.diff-tag[data-level="0"] .diff-dot { background: #16a34a; }
+.diff-tag[data-level="1"] .diff-dot { background: #d97706; }
+.diff-tag[data-level="2"] .diff-dot { background: #dc2626; }
+
 @media (max-width: 640px) {
   .h-display {
     font-size: 32px;

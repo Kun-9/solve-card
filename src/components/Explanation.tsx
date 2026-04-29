@@ -1,4 +1,5 @@
-import type { ExplanationContent, ExplanationNote } from "../types";
+import type { Difficulty, ExplanationContent, ExplanationNote } from "../types";
+import { DIFFICULTY_LABEL } from "../types";
 import { choiceLabel } from "../lib/utils";
 
 function sortNotes(notes: ExplanationNote[] | undefined): ExplanationNote[] {
@@ -24,6 +25,8 @@ interface ExplanationProps {
   answerIndex: number;
   choices: string[];
   explanation?: ExplanationContent;
+  /** Dev 트랙에서만 채워지는 난이도. 있으면 헤더에 인디케이터로 표시. */
+  difficulty?: Difficulty;
   /** quiz는 "card", result 오답 노트는 "flat". */
   variant?: "card" | "flat";
 }
@@ -33,6 +36,7 @@ export function Explanation({
   answerIndex,
   choices,
   explanation,
+  difficulty,
   variant = "card",
 }: ExplanationProps) {
   const answerText = choices[answerIndex] ?? "";
@@ -50,7 +54,19 @@ export function Explanation({
   return (
     <section className="explain" data-tone={tone} data-variant={variant}>
       <header className="explain-header">
-        <span className="explain-title">{title}</span>
+        <div className="explain-title-row">
+          <span className="explain-title">{title}</span>
+          {difficulty !== undefined && (
+            <span
+              className="diff-tag"
+              data-level={difficulty}
+              aria-label={`난이도 ${DIFFICULTY_LABEL[difficulty]}`}
+            >
+              <span className="diff-dot" aria-hidden />
+              난이도 {DIFFICULTY_LABEL[difficulty]}
+            </span>
+          )}
+        </div>
         <span className="explain-answer">
           정답 <strong>{choiceLabel(answerIndex)}</strong>. {answerText}
         </span>

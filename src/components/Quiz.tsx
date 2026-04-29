@@ -252,6 +252,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit, onAttemptedCh
             answerIndex={current.answerIndex}
             choices={current.choices}
             explanation={current.explanation}
+            difficulty={current.difficulty}
             variant="card"
           />
         )}

@@ -6,6 +6,7 @@ import type {
   QuestionBank,
   TrackMeta,
 } from "../types";
+import { useConfirm } from "./ConfirmDialog";
 
 interface HomeHubProps {
   bank: QuestionBank;
@@ -37,6 +38,18 @@ export function HomeHub({
   onResume,
   onDiscardInProgress,
 }: HomeHubProps) {
+  const confirm = useConfirm();
+  const handleDiscard = onDiscardInProgress
+    ? async (roundId: string, roundTitle: string) => {
+        const ok = await confirm({
+          title: "이어풀기 삭제",
+          message: `'${roundTitle}'의 이어풀기 세션을 삭제할까요?`,
+          confirmLabel: "삭제",
+          variant: "danger",
+        });
+        if (ok) onDiscardInProgress(roundId);
+      }
+    : undefined;
   const [domain, setDomain] = useState<Domain>("cert");
 
   const tracks = useMemo<TrackMeta[]>(() => {
@@ -144,8 +157,8 @@ export function HomeHub({
                 session={s}
                 onResume={() => onResume(s.roundId)}
                 onDiscard={
-                  onDiscardInProgress
-                    ? () => onDiscardInProgress(s.roundId)
+                  handleDiscard
+                    ? () => handleDiscard(s.roundId, s.roundTitle)
                     : undefined
                 }
               />
@@ -310,12 +323,10 @@ function ResumeCard({ session, onResume, onDiscard }: ResumeCardProps) {
           className="btn btn-ghost btn-sm resume-card-discard"
           onClick={(e) => {
             e.stopPropagation();
-            if (window.confirm("이 이어풀기 세션을 버리시겠어요?")) {
-              onDiscard();
-            }
+            onDiscard();
           }}
         >
-          버리기
+          삭제
         </button>
       )}
     </div>

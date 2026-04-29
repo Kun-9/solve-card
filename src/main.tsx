@@ -3,12 +3,15 @@ import { createRoot } from "react-dom/client";
 import "highlight.js/styles/atom-one-light.css";
 import "./styles/globals.css";
 import { App } from "./App";
+import { ConfirmProvider } from "./components/ConfirmDialog";
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("#root element not found");
 
 createRoot(rootEl).render(
   <StrictMode>
-    <App />
+    <ConfirmProvider>
+      <App />
+    </ConfirmProvider>
   </StrictMode>,
 );

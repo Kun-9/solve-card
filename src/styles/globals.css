@@ -360,6 +360,12 @@ main {
   border: 1px solid var(--hairline);
 }
 
+.btn-danger {
+  background: var(--wrong);
+  color: var(--cream-soft);
+  box-shadow: var(--shadow-button-inset);
+}
+
 .btn-pill {
   border-radius: var(--r-pill);
   padding: 7px 14px;
@@ -1521,4 +1527,94 @@ main {
 .md.explain-note-body pre {
   font-size: 12.5px;
   padding: 10px 12px;
+}
+
+/* ─────────────────────────────────────────────
+   Confirm dialog (모달)
+   ───────────────────────────────────────────── */
+.cd-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 28, 28, 0.42);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+  animation: cd-fade-in 160ms ease;
+}
+
+.cd-sheet {
+  width: 100%;
+  max-width: 420px;
+  background: var(--cream-raised);
+  border-radius: var(--r-container);
+  padding: 24px 24px 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18),
+    0 4px 12px rgba(0, 0, 0, 0.08);
+  animation: cd-pop-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.cd-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  margin: 0 0 8px;
+  color: var(--charcoal);
+}
+
+.cd-message {
+  font-size: 15px;
+  color: var(--charcoal-83);
+  margin: 0 0 20px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.cd-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cd-btn {
+  min-width: 96px;
+}
+
+@keyframes cd-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes cd-pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 480px) {
+  .cd-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .cd-sheet {
+    max-width: none;
+    border-radius: var(--r-container) var(--r-container) 0 0;
+    padding: 22px 20px max(20px, env(safe-area-inset-bottom));
+    animation: cd-slide-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .cd-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .cd-btn {
+    width: 100%;
+    min-width: 0;
+    padding: 12px 16px;
+  }
+  @keyframes cd-slide-up {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
 }

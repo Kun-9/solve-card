@@ -29,6 +29,7 @@ import { Quiz } from "./components/Quiz";
 import { Result } from "./components/Result";
 import { Manage } from "./components/Manage";
 import { Topbar } from "./components/Topbar";
+import { useConfirm } from "./components/ConfirmDialog";
 import { shuffle } from "./lib/utils";
 import { useAuth } from "./lib/useAuth";
 
@@ -69,6 +70,7 @@ const EMPTY_BANK: QuestionBank = { rounds: [], updatedAt: "" };
 export function App() {
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? null;
+  const confirm = useConfirm();
 
   const [bank, setBank] = useState<QuestionBank>(EMPTY_BANK);
   const [history, setHistory] = useState(() => loadHistory());
@@ -127,31 +129,36 @@ export function App() {
     quizAttemptedRef.current = attempted;
   }, []);
 
-  const requestExitQuiz = useCallback(() => {
+  const requestExitQuiz = useCallback(async (): Promise<boolean> => {
     if (!quizAttemptedRef.current) return true;
     // ordered 모드는 [이어 풀기]에 자동 저장되므로 confirm 생략
     if (route.name === "quiz" && route.mode === "ordered") {
       quizAttemptedRef.current = false;
       return true;
     }
-    const ok = window.confirm("나가면 진행한 답변이 사라져요. 그만두시겠어요?");
+    const ok = await confirm({
+      title: "그만두기",
+      message: "나가면 진행한 답변이 사라져요.\n그만두시겠어요?",
+      confirmLabel: "그만두기",
+      variant: "danger",
+    });
     if (ok) quizAttemptedRef.current = false;
     return ok;
-  }, [route]);
+  }, [route, confirm]);
 
-  const goHome = useCallback(() => {
-    if (!requestExitQuiz()) return;
+  const goHome = useCallback(async () => {
+    if (!(await requestExitQuiz())) return;
     setRoute({ name: "home" });
   }, [requestExitQuiz]);
-  const goManage = useCallback(() => {
+  const goManage = useCallback(async () => {
     if (!import.meta.env.DEV) return;
-    if (!requestExitQuiz()) return;
+    if (!(await requestExitQuiz())) return;
     setRoute({ name: "manage" });
   }, [requestExitQuiz]);
 
   const goTrack = useCallback(
-    (track: TrackMeta) => {
-      if (!requestExitQuiz()) return;
+    async (track: TrackMeta) => {
+      if (!(await requestExitQuiz())) return;
       if (track.domain === "cert") {
         setRoute({ name: "cert", trackId: track.id });
       } else {
@@ -162,8 +169,8 @@ export function App() {
   );
 
   const goCategory = useCallback(
-    (categoryId: string) => {
-      if (!requestExitQuiz()) return;
+    async (categoryId: string) => {
+      if (!(await requestExitQuiz())) return;
       setRoute({ name: "dev-category", categoryId });
     },
     [requestExitQuiz],
@@ -315,8 +322,8 @@ export function App() {
     }));
   }, []);
 
-  const exitQuiz = useCallback(() => {
-    if (!requestExitQuiz()) return;
+  const exitQuiz = useCallback(async () => {
+    if (!(await requestExitQuiz())) return;
     setRoute((prev) => (prev.name === "quiz" ? prev.origin : { name: "home" }));
   }, [requestExitQuiz]);
 

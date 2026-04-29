@@ -16,6 +16,7 @@ import {
   saveBankToFile,
 } from "../data/storage";
 import { choiceLabel, readImageAsDataUrl, resolveImageUrl, uid } from "../lib/utils";
+import { useConfirm } from "./ConfirmDialog";
 
 interface ManageProps {
   bank: QuestionBank;
@@ -25,6 +26,7 @@ interface ManageProps {
 }
 
 export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
+  const confirm = useConfirm();
   const [draft, setDraft] = useState<QuestionBank>({
     rounds: [],
     updatedAt: bank.updatedAt ?? "",
@@ -76,8 +78,14 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
     setActiveId(id);
   }
 
-  function deleteRound(roundId: string) {
-    if (!window.confirm("이 회차를 삭제할까요? 저장 후에는 되돌릴 수 없어요.")) return;
+  async function deleteRound(roundId: string) {
+    const ok = await confirm({
+      title: "회차 삭제",
+      message: "이 회차를 삭제할까요?\n저장 후에는 되돌릴 수 없어요.",
+      confirmLabel: "삭제",
+      variant: "danger",
+    });
+    if (!ok) return;
     const next = draft.rounds.filter((r) => r.id !== roundId);
     setRounds(next);
     if (activeId === roundId) setActiveId(next[0]?.id ?? null);
@@ -168,8 +176,14 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
     }
   }
 
-  function handleResetSample() {
-    if (!window.confirm("내장 샘플 데이터로 초기화할까요?")) return;
+  async function handleResetSample() {
+    const ok = await confirm({
+      title: "샘플 데이터로 초기화",
+      message: "내장 샘플 데이터로 초기화할까요?",
+      confirmLabel: "초기화",
+      variant: "danger",
+    });
+    if (!ok) return;
     const next = resetToSeed();
     onChange(next);
     setActiveId(next.rounds[0]?.id ?? null);
@@ -177,12 +191,14 @@ export function Manage({ bank, onChange, onReplace, onClose }: ManageProps) {
   }
 
   async function handleResyncRemote() {
-    if (
-      !window.confirm(
-        "기본 기출 데이터(public/data/index.json)로 다시 동기화할까요? 직접 추가/수정한 내용이 있다면 사라질 수 있어요.",
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: "기본 데이터로 동기화",
+      message:
+        "기본 기출 데이터로 다시 동기화할까요?\n직접 추가/수정한 내용이 있다면 사라질 수 있어요.",
+      confirmLabel: "동기화",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       const next = await resyncRemoteBank();
       onReplace(next);

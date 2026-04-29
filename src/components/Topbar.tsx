@@ -6,6 +6,7 @@ import {
   signOut,
   useAuth,
 } from "../lib/useAuth";
+import { useConfirm } from "./ConfirmDialog";
 
 interface TopbarProps {
   current: "home" | "manage";
@@ -16,9 +17,15 @@ interface TopbarProps {
 export function Topbar({ current, onHome, onManage }: TopbarProps) {
   const showManage = import.meta.env.DEV;
   const { user, loading, configured } = useAuth();
+  const confirm = useConfirm();
 
   const handleSignOut = async () => {
-    if (!window.confirm("로그아웃 하시겠어요?")) return;
+    const ok = await confirm({
+      title: "로그아웃",
+      message: "로그아웃 하시겠어요?",
+      confirmLabel: "로그아웃",
+    });
+    if (!ok) return;
     await signOut();
   };
 

@@ -32,7 +32,7 @@
     },
     {
       "id": "javascript-scope-closure-this-q2",
-      "prompt": "JavaScript 호이스팅(hoisting)에 대한 설명으로 가장 정확한 것은?",
+      "prompt": "JavaScript 호이스팅에 대한 설명으로 가장 정확한 것은?",
       "choices": [
         "런타임에 코드 순서를 위로 다시 정렬해 실행한다",
         "선언이 스코프 최상단으로 끌어올려진 것처럼 동작한다 (실제 코드는 그대로)",
@@ -77,12 +77,12 @@
     },
     {
       "id": "javascript-scope-closure-this-q4",
-      "prompt": "클로저(closure)의 정의로 가장 적절한 것은?",
+      "prompt": "클로저의 정의로 가장 적절한 것은?",
       "choices": [
         "함수가 자신이 선언된 위치의 외부 변수를 계속 참조할 수 있는 함수",
-        "함수가 호출된 위치의 변수를 참조하는 함수",
-        "전역 변수에 절대 접근하지 않는 순수 함수",
-        "비동기 콜백으로 등록된 모든 함수"
+        "함수가 호출된 위치(콜 스택 상위)의 변수를 동적으로 참조하는 함수",
+        "전역 변수에 절대 접근하지 않고 부수 효과도 없는 순수 함수",
+        "비동기 콜백으로 등록되어 이벤트 루프에 의해 나중에 실행되는 함수"
       ],
       "correct_index": 1,
       "difficulty": 0,
@@ -102,7 +102,7 @@
       "prompt": "브라우저에서 일반 함수가 단독 호출(`fn()`)될 때 함수 내부의 this 는 무엇을 가리키는가? (strict mode 가 아님)",
       "choices": [
         "호출한 파일의 모듈 객체",
-        "전역 객체(window)",
+        "전역 객체",
         "undefined",
         "함수 자기 자신"
       ],
@@ -121,7 +121,7 @@
     },
     {
       "id": "javascript-scope-closure-this-q6",
-      "prompt": "프로토타입(prototype)의 정의로 가장 적절한 것은?",
+      "prompt": "프로토타입의 정의로 가장 적절한 것은?",
       "choices": [
         "객체 인스턴스마다 새로 복제되는 메서드 묶음",
         "정적(static) 메서드를 모아둔 컨테이너",
@@ -190,7 +190,7 @@
       "prompt": "다음 코드에서 fn() 의 this 는?\n```js\nconst obj = {\n  name: 'A',\n  fn: () => console.log(this)\n};\nobj.fn();\n```",
       "choices": [
         "obj",
-        "전역 객체(window) 또는 undefined",
+        "전역 객체 또는 undefined",
         "fn 함수 자체",
         "ReferenceError"
       ],
@@ -233,10 +233,10 @@
       "id": "javascript-scope-closure-this-q11",
       "prompt": "프로토타입 체인 탐색에 대한 설명으로 옳은 것은?",
       "choices": [
-        "객체에 속성이 없으면 [[Prototype]] 체인을 따라 위로 올라가며 검색하고, 끝까지 없으면 undefined 를 반환한다",
-        "프로토타입에 같은 이름이 있으면 항상 프로토타입 값이 우선한다",
-        "객체에 속성이 없으면 즉시 ReferenceError 가 발생한다",
-        "프로토타입 체인 탐색은 ES2015(class) 이후에만 동작한다"
+        "객체에 속성이 없으면 [[Prototype]] 체인을 따라 올라가 검색하고, 끝까지 없으면 undefined 를 반환한다",
+        "프로토타입에 같은 이름이 있으면 자기 자신보다 항상 프로토타입 값이 우선해 적용된다",
+        "객체에 속성이 없으면 즉시 ReferenceError 를 던지며 탐색을 거기서 중단한다",
+        "프로토타입 체인 탐색은 ES2015 의 class 도입 이후에만 동작하는 새로운 메커니즘이다"
       ],
       "correct_index": 1,
       "difficulty": 1,
@@ -277,10 +277,10 @@
       "id": "javascript-scope-closure-this-q13",
       "prompt": "함수 선언문(`function foo(){}`)과 함수 표현식(`const foo = function(){}`)의 호이스팅 차이로 옳은 것은?",
       "choices": [
-        "둘 다 본문까지 통째로 호이스팅된다",
-        "함수 표현식만 호이스팅되고 선언문은 호이스팅되지 않는다",
-        "선언문은 본문까지 호이스팅되어 선언 전에 호출 가능, 표현식은 변수만 호이스팅되어 선언 전에 호출 시 TypeError/ReferenceError",
-        "둘 다 절대 호이스팅되지 않는다"
+        "둘 다 변수와 함수 본문이 통째로 스코프 최상단으로 호이스팅되어 동일하게 동작한다",
+        "함수 표현식만 호이스팅되고 함수 선언문은 호이스팅되지 않아 선언 전 호출이 불가능하다",
+        "선언문은 본문까지 호이스팅되어 선언 전 호출 가능, 표현식은 변수만 호이스팅되어 호출 시 TypeError",
+        "둘 다 호이스팅되지 않으며 반드시 선언 줄에 도달한 뒤에야 사용할 수 있다"
       ],
       "correct_index": 3,
       "difficulty": 1,

@@ -100,9 +100,9 @@
       "prompt": "Flexbox 의 정의로 가장 정확한 것은?",
       "choices": [
         "한 축(가로 또는 세로) 을 따라 자식들의 정렬·크기·여백을 분배하는 1차원 레이아웃 시스템",
-        "행과 열을 동시에 정의하는 2차원 레이아웃 시스템",
-        "텍스트의 줄바꿈을 제어하는 속성",
-        "이미지를 자동으로 잘라 주는 시스템"
+        "행과 열의 두 축을 동시에 정의하고 자식을 셀에 배치하는 2차원 레이아웃 시스템",
+        "텍스트의 자동 줄바꿈·단어 분리 동작을 제어하는 일반 CSS 속성",
+        "이미지 영역을 정해진 격자에 맞춰 자동 분할해 잘라 주는 시스템"
       ],
       "correct_index": 1,
       "difficulty": 0,
@@ -123,7 +123,7 @@
       "choices": [
         "텍스트 가독성을 위한 행간 조절 시스템",
         "이미지 캐러셀 전용 레이아웃",
-        "행(row) 과 열(column) 을 동시에 정의해 영역을 배치하는 2차원 레이아웃 시스템",
+        "행과 열을 동시에 정의해 영역을 배치하는 2차원 레이아웃 시스템",
         "Flex 의 별칭이며 동작이 동일하다"
       ],
       "correct_index": 3,
@@ -185,7 +185,7 @@
     },
     {
       "id": "html-css-layout-q9",
-      "prompt": "position: fixed 인 요소의 위치 기준(containing block) 으로 가장 정확한 것은?",
+      "prompt": "position: fixed 인 요소의 위치 기준으로 가장 정확한 것은?",
       "choices": [
         "보통 뷰포트지만, 조상에 transform/filter/perspective/will-change 등이 적용되면 그 조상이 새 기준이 된다",
         "항상 부모 요소",
@@ -253,10 +253,10 @@
       "id": "html-css-layout-q12",
       "prompt": "flex 단축 속성 `flex: 1` 의 의미로 가장 정확한 것은?",
       "choices": [
-        "flex-grow: 0; flex-shrink: 0; flex-basis: auto;",
-        "flex-grow: 1; flex-shrink: 0; flex-basis: 0;",
-        "자식의 너비를 부모의 100% 로 강제 고정한다",
-        "flex-grow: 1; flex-shrink: 1; flex-basis: 0% (자식들이 남는 공간을 균등하게 나눠 가짐)"
+        "flex-grow: 0 / flex-shrink: 0 / flex-basis: auto 인 \"고정 크기 + 늘리지도 줄이지도 않음\"",
+        "flex-grow: 1 / flex-shrink: 0 / flex-basis: 0 인 \"늘릴 수만 있고 줄이진 않음\"",
+        "자식 한 명의 너비를 부모 컨테이너 너비의 100% 로 강제 고정해 한 줄을 다 차지하게 한다",
+        "flex-grow: 1 / flex-shrink: 1 / flex-basis: 0% 인 \"남은 공간을 자식들이 균등 분배\""
       ],
       "correct_index": 4,
       "difficulty": 1,
@@ -319,10 +319,10 @@
       "id": "html-css-layout-q15",
       "prompt": "z-index 와 \"스태킹 컨텍스트(stacking context)\" 의 관계로 가장 정확한 설명은?",
       "choices": [
-        "z-index 는 항상 페이지 전체 기준의 절대 순위를 결정한다",
-        "z-index 는 같은 스태킹 컨텍스트 안에서만 비교되며, 새 스태킹 컨텍스트(예: opacity<1, transform, position+z-index 등) 가 생기면 그 안의 z-index 는 외부의 더 큰 z-index 를 \"이길\" 수 있다",
-        "z-index 는 음수 값을 지원하지 않는다",
-        "z-index 는 inline 요소에서만 동작한다"
+        "z-index 값은 페이지 전체 기준의 절대 순위를 결정해 어디서나 동일하게 적용된다",
+        "z-index 는 같은 스태킹 컨텍스트 안에서만 비교되며, 새 컨텍스트가 생기면 안의 큰 값이 밖의 더 큰 값을 이길 수 있다",
+        "z-index 는 0 이상의 양수 값만 지원하고 음수 값은 무시되어 0 으로 처리된다",
+        "z-index 는 inline 요소에만 적용 가능하고 block 요소에는 무시되는 속성이다"
       ],
       "correct_index": 2,
       "difficulty": 2,
@@ -385,10 +385,10 @@
       "id": "html-css-layout-q18",
       "prompt": "CSS Grid 의 \"명시적 그리드(explicit)\" 와 \"암묵적 그리드(implicit)\" 의 차이로 가장 정확한 설명은?",
       "choices": [
-        "둘은 같은 의미이며 작성 방식만 다르다",
-        "명시적 그리드는 절대 셀 크기를 자동으로 늘리지 않는다",
-        "grid-template-rows/columns 로 정의한 것이 명시적, 그 범위를 벗어난 자식이 들어왔을 때 grid-auto-rows/columns 로 자동 생성되는 트랙이 암묵적",
-        "암묵적 그리드는 IE 에서만 동작한다"
+        "둘은 사실상 같은 의미이며 단지 코드 작성 방식·표기 차이만 있는 동의어이다",
+        "명시적 그리드는 셀 크기를 한 번 정하면 절대 자동으로 늘리거나 줄이지 않는다",
+        "grid-template-rows/columns 로 정의한 것이 명시적, grid-auto-rows/columns 로 자동 생성되는 트랙이 암묵적",
+        "암묵적 그리드는 IE 에서만 동작하는 폐기된 기능이라 모던 브라우저에선 무시된다"
       ],
       "correct_index": 3,
       "difficulty": 2,
@@ -429,10 +429,10 @@
       "id": "html-css-layout-q20",
       "prompt": "inline-block 요소와 Flex item 의 차이로 가장 정확한 설명은?",
       "choices": [
-        "둘 다 동작이 동일하다",
-        "inline-block 은 width/height 가 적용되지 않는다",
-        "Flex item 은 항상 가로로만 배치된다",
-        "inline-block 은 텍스트 흐름 안에서 좌→우로 자연스럽게 배치되어 white-space 의 영향을 받지만, Flex item 은 부모의 flex 컨테이너 규칙(주축/교차축, justify/align)에 따라 정렬·크기 분배된다"
+        "두 방식은 결과적으로 동작이 완전히 동일하며 표기상 차이만 있다",
+        "inline-block 은 inline 과 동일하게 width/height 가 적용되지 않아 박스 모델이 무력화된다",
+        "Flex item 은 부모 설정과 무관하게 언제나 가로 한 방향으로만 배치되어 줄바꿈이 없다",
+        "inline-block 은 텍스트 흐름 안에 배치되어 공백·줄바꿈의 영향을 받지만, Flex item 은 부모 flex 규칙에 따라 정렬·크기 분배된다"
       ],
       "correct_index": 4,
       "difficulty": 2,

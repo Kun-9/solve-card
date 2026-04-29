@@ -16,12 +16,24 @@ import { Manage } from "./components/Manage";
 import { Topbar } from "./components/Topbar";
 import { shuffle } from "./lib/utils";
 
+type EntryRoute = { name: "home" } | { name: "cert"; trackId: string };
 type Route =
-  | { name: "home" }
-  | { name: "cert"; trackId: string }
-  | { name: "quiz"; round: Round; mode: "ordered" | "random"; sourceLabel: string }
-  | { name: "result"; result: RoundResult }
+  | EntryRoute
+  | {
+      name: "quiz";
+      round: Round;
+      mode: "ordered" | "random";
+      sourceLabel: string;
+      origin: EntryRoute;
+    }
+  | { name: "result"; result: RoundResult; origin: EntryRoute }
   | { name: "manage" };
+
+function originOf(prev: Route): EntryRoute {
+  if (prev.name === "quiz" || prev.name === "result") return prev.origin;
+  if (prev.name === "manage") return { name: "home" };
+  return prev;
+}
 
 const RANDOM_POOL_SIZE = 20;
 const EMPTY_BANK: QuestionBank = { rounds: [], updatedAt: "" };
@@ -100,12 +112,13 @@ export function App() {
     const full = await ensureRound(meta.id);
     if (!full || full.questions.length === 0) return;
     const questions = shuffled ? shuffle(full.questions) : full.questions;
-    setRoute({
+    setRoute((prev) => ({
       name: "quiz",
       round: { ...full, questions },
       mode: shuffled ? "random" : "ordered",
       sourceLabel: shuffled ? `${full.title} · 셔플` : full.title,
-    });
+      origin: originOf(prev),
+    }));
   }, []);
 
   const startRandom = useCallback(
@@ -137,7 +150,13 @@ export function App() {
         description: `${pool.length}문제 중 ${picked.length}문제를 무작위로 출제합니다.`,
         questions: picked,
       };
-      setRoute({ name: "quiz", round, mode: "random", sourceLabel: label });
+      setRoute((prev) => ({
+        name: "quiz",
+        round,
+        mode: "random",
+        sourceLabel: label,
+        origin: originOf(prev),
+      }));
     },
     [],
   );
@@ -145,8 +164,17 @@ export function App() {
   const finishQuiz = useCallback((result: RoundResult) => {
     const next = appendResult(result);
     setHistory(next);
-    setRoute({ name: "result", result });
+    setRoute((prev) => ({
+      name: "result",
+      result,
+      origin: prev.name === "quiz" ? prev.origin : { name: "home" },
+    }));
   }, []);
+
+  const exitQuiz = useCallback(() => {
+    if (!requestExitQuiz()) return;
+    setRoute((prev) => (prev.name === "quiz" ? prev.origin : { name: "home" }));
+  }, [requestExitQuiz]);
 
   const retry = useCallback(async () => {
     if (route.name !== "result") return;
@@ -214,7 +242,7 @@ export function App() {
               mode={route.mode}
               sourceLabel={route.sourceLabel}
               onFinish={finishQuiz}
-              onExit={goHome}
+              onExit={exitQuiz}
               onAttemptedChange={handleQuizAttemptedChange}
             />
           )}

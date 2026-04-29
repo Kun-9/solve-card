@@ -1,6 +1,7 @@
 import type { RoundResult } from "../types";
 import { formatDuration, choiceLabel, resolveImageUrl } from "../lib/utils";
 import { Explanation } from "./Explanation";
+import { Markdown } from "./Markdown";
 
 interface ResultProps {
   result: RoundResult;
@@ -54,9 +55,12 @@ export function Result({ result, onRetry, onHome }: ResultProps) {
             {wrong.map((log) => (
               <article key={log.questionId} className="card stack" style={{ gap: 10 }}>
                 {log.section && <span className="caption">{log.section}</span>}
-                <p className="body" style={{ color: "var(--charcoal)", fontWeight: 600 }}>
-                  {log.prompt}
-                </p>
+                <div
+                  className="body prompt-md"
+                  style={{ color: "var(--charcoal)", fontWeight: 600 }}
+                >
+                  <Markdown>{log.prompt}</Markdown>
+                </div>
                 {log.imageUrl && (
                   <figure className="question-figure question-figure-sm">
                     <img src={resolveImageUrl(log.imageUrl)} alt="문제 이미지" loading="lazy" />

@@ -1,6 +1,7 @@
 import type { Difficulty, ExplanationContent, ExplanationNote } from "../types";
 import { DIFFICULTY_LABEL } from "../types";
 import { choiceLabel } from "../lib/utils";
+import { Markdown } from "./Markdown";
 
 function sortNotes(notes: ExplanationNote[] | undefined): ExplanationNote[] {
   if (!notes?.length) return [];
@@ -72,7 +73,7 @@ export function Explanation({
         </span>
       </header>
 
-      {summary && <p className="explain-summary">{summary}</p>}
+      {summary && <Markdown className="explain-summary">{summary}</Markdown>}
 
       {notes.length > 0 && (
         <div className="explain-notes">
@@ -88,7 +89,7 @@ export function Explanation({
                 <div className="explain-note-text">
                   <span className="explain-note-label">{note.label}</span>
                   {note.body && (
-                    <span className="explain-note-body">{note.body}</span>
+                    <Markdown className="explain-note-body">{note.body}</Markdown>
                   )}
                 </div>
               </li>

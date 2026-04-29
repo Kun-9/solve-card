@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { AnswerLog, Round, RoundResult } from "../types";
 import { choiceLabel, resolveImageUrl } from "../lib/utils";
 import { Explanation } from "./Explanation";
+import { Markdown } from "./Markdown";
 
 interface QuizProps {
   round: Round;
@@ -222,9 +223,14 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit, onAttemptedCh
 
       <article className="card card-lg stack" style={{ gap: 16 }}>
         {current.section && <span className="caption">{current.section}</span>}
-        <h2 className="h-card" style={{ fontSize: 22, lineHeight: 1.35 }}>
-          {current.prompt}
-        </h2>
+        <div
+          className="h-card prompt-md"
+          role="heading"
+          aria-level={2}
+          style={{ fontSize: 22, lineHeight: 1.35 }}
+        >
+          <Markdown>{current.prompt}</Markdown>
+        </div>
 
         {current.imageUrl && (
           <figure className="question-figure">

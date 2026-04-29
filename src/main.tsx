@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import "highlight.js/styles/atom-one-light.css";
 import "./styles/globals.css";
 import { App } from "./App";
 

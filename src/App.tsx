@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { QuestionBank, Round, RoundResult, TrackMeta } from "./types";
+import type {
+  Difficulty,
+  QuestionBank,
+  Round,
+  RoundResult,
+  TrackMeta,
+} from "./types";
 import {
   appendResult,
   ensureAllRounds,
@@ -10,13 +16,20 @@ import {
 } from "./data/storage";
 import { HomeHub } from "./components/HomeHub";
 import { CertTrackScreen } from "./components/CertTrackScreen";
+import { DevCategoryScreen } from "./components/DevCategoryScreen";
+import { DevTrackScreen } from "./components/DevTrackScreen";
 import { Quiz } from "./components/Quiz";
 import { Result } from "./components/Result";
 import { Manage } from "./components/Manage";
 import { Topbar } from "./components/Topbar";
 import { shuffle } from "./lib/utils";
 
-type EntryRoute = { name: "home" } | { name: "cert"; trackId: string };
+type EntryRoute =
+  | { name: "home" }
+  | { name: "cert"; trackId: string }
+  | { name: "dev-category"; categoryId: string }
+  | { name: "dev-track"; trackId: string };
+
 type Route =
   | EntryRoute
   | {
@@ -101,9 +114,20 @@ export function App() {
 
   const goTrack = useCallback(
     (track: TrackMeta) => {
-      if (track.domain !== "cert") return; // Dev 트랙은 Phase 2 에서 라우팅 추가
       if (!requestExitQuiz()) return;
-      setRoute({ name: "cert", trackId: track.id });
+      if (track.domain === "cert") {
+        setRoute({ name: "cert", trackId: track.id });
+      } else {
+        setRoute({ name: "dev-track", trackId: track.id });
+      }
+    },
+    [requestExitQuiz],
+  );
+
+  const goCategory = useCallback(
+    (categoryId: string) => {
+      if (!requestExitQuiz()) return;
+      setRoute({ name: "dev-category", categoryId });
     },
     [requestExitQuiz],
   );
@@ -122,15 +146,18 @@ export function App() {
   }, []);
 
   const startRandom = useCallback(
-    async (subjectKey?: string, trackId?: string) => {
+    async (subjectKey?: string, trackId?: string, difficulty?: Difficulty) => {
       const full = await ensureAllRounds();
       const scopedRounds = trackId
         ? full.rounds.filter((r) => r.trackId === trackId)
         : full.rounds;
-      const all = scopedRounds.flatMap((r) => r.questions);
-      const pool = subjectKey
-        ? all.filter((q) => q.section?.startsWith(subjectKey))
-        : all;
+      let pool = scopedRounds.flatMap((r) => r.questions);
+      if (subjectKey) {
+        pool = pool.filter((q) => q.section?.startsWith(subjectKey));
+      }
+      if (difficulty !== undefined) {
+        pool = pool.filter((q) => q.difficulty === difficulty);
+      }
       if (pool.length === 0) return;
       const picked = shuffle(pool).slice(
         0,
@@ -140,11 +167,20 @@ export function App() {
         ? (full.tracks?.find((t) => t.id === trackId)?.title ?? trackId)
         : null;
       const subjectPart = subjectKey ?? "전체";
-      const label = trackTitle
-        ? `${trackTitle} · ${subjectPart} 랜덤`
-        : `${subjectPart} 랜덤`;
+      const diffPart =
+        difficulty === 0
+          ? "하"
+          : difficulty === 1
+            ? "중"
+            : difficulty === 2
+              ? "상"
+              : null;
+      const labelParts = [trackTitle, diffPart ?? subjectPart, "랜덤"].filter(
+        Boolean,
+      );
+      const label = labelParts.join(" · ");
       const round: Round = {
-        id: `random-${trackId ?? "all"}-${subjectKey ?? "all"}-${Date.now()}`,
+        id: `random-${trackId ?? "all"}-${subjectKey ?? "all"}-${difficulty ?? "all"}-${Date.now()}`,
         trackId,
         title: label,
         description: `${pool.length}문제 중 ${picked.length}문제를 무작위로 출제합니다.`,
@@ -221,11 +257,13 @@ export function App() {
             <HomeHub
               bank={bank}
               onSelectTrack={goTrack}
+              onSelectCategory={goCategory}
               onManage={goManage}
             />
           )}
           {route.name === "cert" && (
             <CertTrackScreen
+              key={route.trackId}
               bank={bank}
               history={history}
               trackId={route.trackId}
@@ -234,6 +272,25 @@ export function App() {
               onStartRandom={startRandom}
               onSelectTrack={goTrack}
               onManage={goManage}
+            />
+          )}
+          {route.name === "dev-category" && (
+            <DevCategoryScreen
+              bank={bank}
+              history={history}
+              categoryId={route.categoryId}
+              onSelectCategory={goCategory}
+              onSelectTrack={goTrack}
+            />
+          )}
+          {route.name === "dev-track" && (
+            <DevTrackScreen
+              bank={bank}
+              history={history}
+              trackId={route.trackId}
+              onStartRound={(round, shuffled) => startRound(round, shuffled)}
+              onStartRandom={startRandom}
+              onSelectTrack={goTrack}
             />
           )}
           {route.name === "quiz" && (

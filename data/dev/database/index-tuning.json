@@ -1,0 +1,139 @@
+{
+  "round_id": "database-index-tuning",
+  "trackId": "database",
+  "chapter": {
+    "id": "index-tuning",
+    "title": "인덱스 & N+1",
+    "description": "B-Tree 인덱스 동작 원리, 복합 인덱스 컬럼 순서, ORM N+1 문제"
+  },
+  "questions": [
+    {
+      "id": "database-index-tuning-q1",
+      "prompt": "RDBMS 의 B-Tree 인덱스가 조회를 빠르게 만드는 가장 본질적인 이유는?",
+      "choices": [
+        "행 데이터를 메모리에 전부 캐싱하기 때문",
+        "정렬된 균형 트리라 탐색 시 비교 횟수가 O(log n) 으로 줄어들기 때문",
+        "같은 값을 압축해 저장하기 때문",
+        "디스크 대신 GPU 에서 검색하기 때문"
+      ],
+      "correct_index": 2,
+      "difficulty": 0,
+      "section": "인덱스",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "B-Tree 는 키가 정렬된 균형 트리라 매 단계마다 탐색 범위가 절반 가까이 줄어듭니다. 그래서 풀 스캔 O(n) 이 O(log n) 으로 떨어지는 게 인덱스의 본질입니다.",
+            "notes": [
+              { "choiceIndex": 0, "label": "버퍼 풀 캐싱", "body": "캐싱은 부수적인 효과일 뿐, 인덱스가 빠른 본질적 이유는 아닙니다." },
+              { "choiceIndex": 2, "label": "압축 저장", "body": "일부 엔진이 인덱스 압축을 지원하지만 자료구조 자체의 속도 원리는 아닙니다." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "database-index-tuning-q2",
+      "prompt": "users 테이블에 idx(created_at) 인덱스가 있다. 다음 중 인덱스를 타지 못해 풀 스캔이 발생할 가능성이 가장 큰 쿼리는?",
+      "choices": [
+        "WHERE created_at = '2024-01-01'",
+        "WHERE created_at BETWEEN '2024-01-01' AND '2024-02-01'",
+        "WHERE DATE(created_at) = '2024-01-01'",
+        "WHERE created_at >= '2024-01-01'"
+      ],
+      "correct_index": 3,
+      "difficulty": 0,
+      "section": "인덱스",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "인덱스 컬럼에 함수를 씌우면 인덱스에 저장된 키와 비교 대상이 달라져 옵티마이저가 인덱스를 사용할 수 없습니다. 보통 BETWEEN 으로 풀어 쓰거나 함수 기반 인덱스를 별도로 만들어 해결합니다.",
+            "notes": [
+              { "choiceIndex": 0, "label": "= 비교", "body": "인덱스 키와 직접 비교하므로 인덱스 그대로 사용." },
+              { "choiceIndex": 1, "label": "범위 검색", "body": "B-Tree 인덱스가 가장 잘 처리하는 패턴 중 하나." },
+              { "choiceIndex": 3, "label": "단방향 범위", "body": "BETWEEN 과 동일하게 인덱스 범위 스캔이 가능합니다." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "database-index-tuning-q3",
+      "prompt": "복합 인덱스 idx(a, b, c) 가 있을 때, 인덱스를 가장 효율적으로 활용하지 못하는 쿼리는?",
+      "choices": [
+        "WHERE a = 1 AND b = 2 AND c = 3",
+        "WHERE a = 1 AND b = 2",
+        "WHERE a = 1 AND c = 3",
+        "WHERE b = 2 AND c = 3"
+      ],
+      "correct_index": 4,
+      "difficulty": 1,
+      "section": "인덱스",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "복합 인덱스는 선두 컬럼부터 정렬되어 있어, 선두 컬럼 a 가 조건에 없으면 인덱스 탐색의 시작점을 잡지 못합니다. (b, c) 만 있는 조건은 사실상 인덱스를 못 씁니다.",
+            "notes": [
+              { "choiceIndex": 1, "label": "(a, b)", "body": "선두 컬럼부터 연속으로 사용해 가장 효율적입니다." },
+              { "choiceIndex": 2, "label": "(a, c)", "body": "a 로 시작점은 잡지만 b 가 빠져 c 부분은 필터링 단계로 떨어집니다(Index Skip Scan 미지원 시)." },
+              { "choiceIndex": 3, "label": "(b, c)", "body": "선두 컬럼이 빠진 전형적인 인덱스 미사용 케이스." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "database-index-tuning-q4",
+      "prompt": "ORM 사용 중 발생하는 N+1 문제의 직접적인 원인으로 가장 적절한 것은?",
+      "choices": [
+        "단일 쿼리로 모든 연관 엔티티를 즉시 로딩하기 때문",
+        "부모 N건을 조회한 뒤 각 부모의 자식을 별도 쿼리로 한 번씩 더 조회하기 때문",
+        "트랜잭션이 너무 길어 락 경합이 발생하기 때문",
+        "인덱스가 없어 풀 스캔이 일어나기 때문"
+      ],
+      "correct_index": 2,
+      "difficulty": 1,
+      "section": "ORM",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "지연 로딩이나 컬렉션 매핑 시, 부모 N건마다 자식을 가져오는 SELECT 가 한 번씩 추가로 나가 총 1 + N 개 쿼리가 발생하는 현상이 N+1 입니다. fetch join, @EntityGraph, IN 절 일괄 조회 등으로 해결합니다.",
+            "notes": [
+              { "choiceIndex": 0, "label": "즉시 로딩(EAGER)", "body": "오히려 N+1 을 가리는 안티패턴이 되기도 하지만, 원인 자체는 아닙니다." },
+              { "choiceIndex": 3, "label": "인덱스 부재", "body": "별개의 성능 이슈로, N+1 의 정의가 아닙니다." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "database-index-tuning-q5",
+      "prompt": "쿼리 SELECT id, name FROM users WHERE email = ? 가 자주 실행되고 idx_email(email) 만 있다. 이 쿼리를 '커버링 인덱스'로 처리하려면 가장 적절한 변경은?",
+      "choices": [
+        "PRIMARY KEY 를 (id, email) 복합 키로 변경한다",
+        "인덱스를 idx(email, id, name) 으로 확장한다",
+        "인덱스에 WHERE 조건 자체를 함께 저장하도록 옵션을 켠다",
+        "쿼리를 SELECT * 로 변경한다"
+      ],
+      "correct_index": 2,
+      "difficulty": 2,
+      "section": "인덱스",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "커버링 인덱스는 SELECT 가 요구하는 모든 컬럼이 인덱스에 포함되어, 테이블(클러스터드 인덱스/힙)을 추가로 들춰보는 Bookmark Lookup 없이 인덱스만으로 결과를 만들 수 있는 경우를 말합니다. 검색 키 email 과 반환 컬럼 id, name 을 모두 인덱스에 포함시키면 됩니다.",
+            "notes": [
+              { "choiceIndex": 0, "label": "PK 변경", "body": "클러스터링 키만 바뀌어 부작용이 크고, 커버링과는 직접적인 관계가 없습니다." },
+              { "choiceIndex": 2, "label": "WHERE 저장 옵션", "body": "그런 옵션은 일반적으로 존재하지 않습니다(부분/필터드 인덱스는 별개 개념)." },
+              { "choiceIndex": 3, "label": "SELECT *", "body": "오히려 더 많은 컬럼을 요구해 커버링이 어려워집니다." }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

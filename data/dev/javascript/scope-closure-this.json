@@ -1,0 +1,453 @@
+{
+  "round_id": "javascript-scope-closure-this",
+  "trackId": "javascript",
+  "chapter": {
+    "id": "scope-closure-this",
+    "title": "스코프 · 클로저 · this · 프로토타입",
+    "description": "JS 변수 스코프, 호이스팅/TDZ, 클로저 동작, this 바인딩 4규칙, 프로토타입 체인 핵심"
+  },
+  "questions": [
+    {
+      "id": "javascript-scope-closure-this-q1",
+      "prompt": "var, let, const 의 스코프 차이로 가장 정확한 설명은?",
+      "choices": [
+        "셋 다 함수 스코프를 갖는다",
+        "var 와 let 은 블록 스코프, const 만 함수 스코프이다",
+        "var 는 함수 스코프, let 과 const 는 블록 스코프이다",
+        "셋 다 블록 스코프를 갖는다"
+      ],
+      "correct_index": 3,
+      "difficulty": 0,
+      "section": "스코프",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "var 는 함수(또는 전역) 스코프, let/const 는 { } 블록 스코프를 가집니다. var 가 if/for 블록을 뚫고 나오는 게 var 의 가장 큰 함정입니다.",
+          "notes": [
+            { "choiceIndex": 0, "label": "전부 함수 스코프", "body": "let/const 가 추가된 이유 자체가 블록 스코프 도입이라 틀립니다." },
+            { "choiceIndex": 3, "label": "전부 블록 스코프", "body": "var 는 여전히 함수 스코프로 동작합니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q2",
+      "prompt": "JavaScript 호이스팅(hoisting)에 대한 설명으로 가장 정확한 것은?",
+      "choices": [
+        "런타임에 코드 순서를 위로 다시 정렬해 실행한다",
+        "선언이 스코프 최상단으로 끌어올려진 것처럼 동작한다 (실제 코드는 그대로)",
+        "var 는 호이스팅되지만 함수 선언은 호이스팅되지 않는다",
+        "let 과 const 는 호이스팅의 대상이 전혀 아니다"
+      ],
+      "correct_index": 2,
+      "difficulty": 0,
+      "section": "호이스팅",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "호이스팅은 실제로 코드가 옮겨지는 게 아니라, 실행 컨텍스트 생성 단계에서 선언이 먼저 메모리에 등록되는 동작을 말합니다. 그래서 \"끌어올려진 것처럼 보이는\" 것이지 코드 자체가 재배치되진 않습니다.",
+          "notes": [
+            { "choiceIndex": 2, "label": "함수 선언", "body": "function 선언문도 본문째 호이스팅됩니다." },
+            { "choiceIndex": 3, "label": "let/const", "body": "let/const 도 호이스팅되지만 TDZ 때문에 선언 전에 접근하면 ReferenceError 가 납니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q3",
+      "prompt": "TDZ(Temporal Dead Zone)에 대한 설명으로 옳은 것은?",
+      "choices": [
+        "var 변수 선언 직전 구간을 가리킨다",
+        "비동기 함수가 await 으로 멈춰 있는 구간이다",
+        "함수가 호출되기 전 매개변수가 비어 있는 구간이다",
+        "let/const 가 호이스팅된 후 선언문에 도달하기 전까지 접근 불가한 구간이다"
+      ],
+      "correct_index": 4,
+      "difficulty": 0,
+      "section": "호이스팅",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "TDZ 는 let/const 가 스코프 진입 시 호이스팅은 됐지만 아직 선언문이 평가되지 않은 구간입니다. 이 구간에서 변수에 접근하면 ReferenceError 가 발생합니다.",
+          "notes": [
+            { "choiceIndex": 0, "label": "var", "body": "var 는 TDZ 가 없습니다. 선언 전에 접근하면 그냥 undefined." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q4",
+      "prompt": "클로저(closure)의 정의로 가장 적절한 것은?",
+      "choices": [
+        "함수가 자신이 선언된 위치의 외부 변수를 계속 참조할 수 있는 함수",
+        "함수가 호출된 위치의 변수를 참조하는 함수",
+        "전역 변수에 절대 접근하지 않는 순수 함수",
+        "비동기 콜백으로 등록된 모든 함수"
+      ],
+      "correct_index": 1,
+      "difficulty": 0,
+      "section": "클로저",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "클로저는 \"선언 시점의 렉시컬 환경\"을 함수가 계속 기억하는 현상입니다. 호출 시점이 아니라 선언 시점이 기준이라는 게 핵심입니다.",
+          "notes": [
+            { "choiceIndex": 1, "label": "호출 위치 기준", "body": "JS 는 동적 스코프가 아니라 렉시컬(정적) 스코프입니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q5",
+      "prompt": "브라우저에서 일반 함수가 단독 호출(`fn()`)될 때 함수 내부의 this 는 무엇을 가리키는가? (strict mode 가 아님)",
+      "choices": [
+        "호출한 파일의 모듈 객체",
+        "전역 객체(window)",
+        "undefined",
+        "함수 자기 자신"
+      ],
+      "correct_index": 2,
+      "difficulty": 0,
+      "section": "this",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "비-strict 모드에서 일반 함수 호출의 this 는 전역 객체(브라우저: window)로 바인딩됩니다. strict 모드에서는 undefined 가 됩니다.",
+          "notes": [
+            { "choiceIndex": 2, "label": "undefined", "body": "strict 모드일 때의 결과입니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q6",
+      "prompt": "프로토타입(prototype)의 정의로 가장 적절한 것은?",
+      "choices": [
+        "객체 인스턴스마다 새로 복제되는 메서드 묶음",
+        "정적(static) 메서드를 모아둔 컨테이너",
+        "객체가 다른 객체로부터 속성을 위임받기 위해 연결된 부모 객체",
+        "JS 엔진이 내부적으로 사용하는 캐시 영역"
+      ],
+      "correct_index": 3,
+      "difficulty": 0,
+      "section": "프로토타입",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "프로토타입은 객체가 [[Prototype]] 링크로 연결된 \"부모 객체\"입니다. 객체에서 속성을 못 찾으면 프로토타입 체인을 따라 올라가며 위임 검색합니다.",
+          "notes": [
+            { "choiceIndex": 0, "label": "복제", "body": "프로토타입은 공유되지, 인스턴스마다 복제되지 않습니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q7",
+      "prompt": "다음 코드의 출력은?\n```js\nif (true) {\n  var a = 1;\n  let b = 2;\n}\nconsole.log(typeof a, typeof b);\n```",
+      "choices": [
+        "'number' 'number'",
+        "'undefined' 'number'",
+        "'number' 'undefined' 후 ReferenceError",
+        "'number' 'undefined'"
+      ],
+      "correct_index": 4,
+      "difficulty": 1,
+      "section": "스코프",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "var a 는 함수 스코프라 if 블록을 빠져나와 살아남고, let b 는 블록 스코프라 사라집니다. typeof 는 선언되지 않은 식별자에 대해 ReferenceError 대신 'undefined' 를 돌려주는 특수한 연산자라 b 도 'undefined' 가 출력됩니다.",
+          "notes": [
+            { "choiceIndex": 2, "label": "ReferenceError", "body": "typeof 가 아닌 일반 참조였다면 b 에서 ReferenceError 가 났을 것입니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q8",
+      "prompt": "다음 카운터의 동작 결과는?\n```js\nfunction makeCounter() {\n  let n = 0;\n  return () => ++n;\n}\nconst c = makeCounter();\nc(); c(); console.log(c());\n```",
+      "choices": [
+        "3",
+        "1",
+        "0",
+        "undefined"
+      ],
+      "correct_index": 1,
+      "difficulty": 1,
+      "section": "클로저",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "내부 함수가 makeCounter 의 지역 변수 n 을 클로저로 붙들고 있어, c 호출 사이에 n 이 0→1→2→3 으로 누적됩니다. 마지막 ++n 의 결과 3 이 출력됩니다.",
+          "notes": [
+            { "choiceIndex": 1, "label": "1", "body": "호출마다 새 환경이 생긴다면 1 이겠지만, 같은 클로저를 공유하므로 누적됩니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q9",
+      "prompt": "다음 코드에서 fn() 의 this 는?\n```js\nconst obj = {\n  name: 'A',\n  fn: () => console.log(this)\n};\nobj.fn();\n```",
+      "choices": [
+        "obj",
+        "전역 객체(window) 또는 undefined",
+        "fn 함수 자체",
+        "ReferenceError"
+      ],
+      "correct_index": 2,
+      "difficulty": 1,
+      "section": "this",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "화살표 함수는 자신만의 this 를 갖지 않고, 정의된 위치의 외부 this 를 그대로 사용합니다. 여기서는 모듈/전역 스코프의 this(브라우저 비-strict 면 window, 모듈/strict 면 undefined)가 됩니다.",
+          "notes": [
+            { "choiceIndex": 0, "label": "obj", "body": "일반 함수였다면 obj 였겠지만 화살표 함수는 호출 객체를 무시합니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q10",
+      "prompt": "call, apply, bind 의 차이로 가장 적절한 것은?",
+      "choices": [
+        "call 만 this 를 바꿀 수 있고, apply/bind 는 인자만 변환한다",
+        "셋 다 동일하게 함수를 즉시 실행하며 this 만 바꾼다",
+        "call/apply 는 즉시 호출하고 인자 전달 방식만 다르며, bind 는 새 함수를 반환한다",
+        "bind 는 동기 호출이고 call/apply 는 비동기 호출이다"
+      ],
+      "correct_index": 3,
+      "difficulty": 1,
+      "section": "this",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "call 과 apply 는 함수를 그 자리에서 호출하며 인자를 각각 펼쳐서/배열로 전달합니다. bind 는 호출하지 않고 this 가 고정된 새 함수를 반환합니다.",
+          "notes": [
+            { "choiceIndex": 0, "label": "call 만", "body": "셋 다 this 변경 가능합니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q11",
+      "prompt": "프로토타입 체인 탐색에 대한 설명으로 옳은 것은?",
+      "choices": [
+        "객체에 속성이 없으면 [[Prototype]] 체인을 따라 위로 올라가며 검색하고, 끝까지 없으면 undefined 를 반환한다",
+        "프로토타입에 같은 이름이 있으면 항상 프로토타입 값이 우선한다",
+        "객체에 속성이 없으면 즉시 ReferenceError 가 발생한다",
+        "프로토타입 체인 탐색은 ES2015(class) 이후에만 동작한다"
+      ],
+      "correct_index": 1,
+      "difficulty": 1,
+      "section": "프로토타입",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "JS 의 속성 조회는 자기 자신 → 프로토타입 → 그 위 프로토타입 순으로 올라가며, Object.prototype 까지 가도 없으면 undefined 입니다. ReferenceError 는 식별자 자체를 못 찾을 때만 발생합니다.",
+          "notes": [
+            { "choiceIndex": 1, "label": "프로토타입 우선", "body": "자기 자신의 속성이 항상 우선합니다(섀도잉)." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q12",
+      "prompt": "다음 코드의 출력은?\n```js\nfor (var i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}\n```",
+      "choices": [
+        "0 1 2",
+        "1 2 3",
+        "0 0 0",
+        "3 3 3"
+      ],
+      "correct_index": 4,
+      "difficulty": 1,
+      "section": "클로저",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "var i 는 함수 스코프라 루프 동안 단 하나만 존재하고, 콜백이 모두 같은 i 를 참조합니다. 콜백 실행 시점에는 루프가 끝나 i = 3 인 상태라 3 이 세 번 찍힙니다. let 으로 바꾸면 매 반복마다 새 바인딩이 생겨 0 1 2 가 됩니다.",
+          "notes": [
+            { "choiceIndex": 0, "label": "0 1 2", "body": "let 으로 선언했을 때의 결과입니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q13",
+      "prompt": "함수 선언문(`function foo(){}`)과 함수 표현식(`const foo = function(){}`)의 호이스팅 차이로 옳은 것은?",
+      "choices": [
+        "둘 다 본문까지 통째로 호이스팅된다",
+        "함수 표현식만 호이스팅되고 선언문은 호이스팅되지 않는다",
+        "선언문은 본문까지 호이스팅되어 선언 전에 호출 가능, 표현식은 변수만 호이스팅되어 선언 전에 호출 시 TypeError/ReferenceError",
+        "둘 다 절대 호이스팅되지 않는다"
+      ],
+      "correct_index": 3,
+      "difficulty": 1,
+      "section": "호이스팅",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "함수 선언문은 본문까지 호이스팅되어 선언 전에 호출해도 동작합니다. 함수 표현식은 변수 선언만 호이스팅되고 할당은 그 자리에 남아, 선언 전에 호출하면 undefined 를 호출하는 셈이라 TypeError 가 납니다(let/const 이면 TDZ ReferenceError).",
+          "notes": [
+            { "choiceIndex": 0, "label": "둘 다 본문 호이스팅", "body": "표현식은 본문이 호이스팅되지 않습니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q14",
+      "prompt": "다음 코드의 출력은?\n```js\nconst user = {\n  name: 'Kim',\n  greet() { console.log(this.name); }\n};\nuser.greet();\n```",
+      "choices": [
+        "undefined",
+        "'Kim'",
+        "TypeError",
+        "''"
+      ],
+      "correct_index": 2,
+      "difficulty": 1,
+      "section": "this",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "메서드 호출(`obj.method()`) 형태에서는 this 가 . 앞의 객체(user)로 바인딩됩니다. 따라서 this.name 은 'Kim'.",
+          "notes": [
+            { "choiceIndex": 0, "label": "undefined", "body": "greet 를 변수에 떼어내 단독 호출했을 때의 결과입니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q15",
+      "prompt": "클로저로 인한 메모리 사용에 대한 설명으로 가장 정확한 것은?",
+      "choices": [
+        "클로저는 GC 와 무관해 메모리에 영향이 없다",
+        "클로저는 자동으로 일정 시간 뒤 해제되므로 신경 쓸 필요가 없다",
+        "클로저가 외부 변수를 참조하면 함수가 살아있는 동안 모든 외부 스코프 변수가 GC 되지 않는다",
+        "클로저가 참조하는 변수만 살아남고 나머지는 GC 되며, 참조가 사라지면 클로저도 회수된다"
+      ],
+      "correct_index": 4,
+      "difficulty": 2,
+      "section": "클로저",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "엔진 최적화에 따라, 클로저가 실제로 참조하는 식별자만 살아남고 나머지는 회수될 수 있습니다. 그리고 클로저(반환된 함수)에 대한 외부 참조가 모두 끊기면 클로저 자체도 GC 대상입니다.",
+          "notes": [
+            { "choiceIndex": 2, "label": "전부 보존", "body": "이론적으로는 그럴 수 있지만 모던 엔진은 사용된 변수만 캡처합니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q16",
+      "prompt": "`new Foo()` 형태로 함수를 호출했을 때 함수 내부의 this 는?",
+      "choices": [
+        "새로 생성되어 Foo.prototype 에 연결된 빈 객체",
+        "전역 객체(window)",
+        "Foo 함수 자체",
+        "호출 시점의 외부 this"
+      ],
+      "correct_index": 1,
+      "difficulty": 2,
+      "section": "this",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "new 호출은 ① 새 객체 생성 ② 그 객체의 [[Prototype]] 을 Foo.prototype 으로 연결 ③ this 를 새 객체로 바인딩한 채 본문 실행 ④ 명시적 객체 반환이 없으면 새 객체 반환, 의 4단계로 동작합니다.",
+          "notes": [
+            { "choiceIndex": 1, "label": "전역 객체", "body": "new 가 빠진 일반 호출의 결과입니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q17",
+      "prompt": "ES2015 의 class 와 프로토타입 기반 상속의 관계로 가장 정확한 것은?",
+      "choices": [
+        "class 는 자바와 동일한 클래스 기반 상속을 새로 도입했다",
+        "class 는 단지 함수의 별칭일 뿐 상속과 무관하다",
+        "class 는 프로토타입 기반 상속의 문법적 설탕(syntactic sugar)이다",
+        "class 는 컴파일 타임에 객체를 미리 생성한다"
+      ],
+      "correct_index": 3,
+      "difficulty": 2,
+      "section": "프로토타입",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "class 는 내부적으로 프로토타입 체인을 그대로 사용합니다. 메서드는 ClassName.prototype 에 들어가고, extends 는 [[Prototype]] 체인을 연결할 뿐입니다.",
+          "notes": [
+            { "choiceIndex": 0, "label": "자바식 클래스", "body": "JS 의 상속은 여전히 위임 기반(prototype) 입니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q18",
+      "prompt": "다음 코드의 출력은?\n```js\nconst obj = {\n  name: 'A',\n  delay() {\n    setTimeout(function () { console.log(this.name); }, 0);\n  }\n};\nobj.delay();\n```",
+      "choices": [
+        "'A'",
+        "undefined 또는 ''",
+        "TypeError",
+        "obj 객체 전체"
+      ],
+      "correct_index": 2,
+      "difficulty": 2,
+      "section": "this",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "setTimeout 콜백은 일반 함수로 호출되어 this 가 obj 로 바인딩되지 않습니다(브라우저 비-strict 에선 window, strict/모듈에선 undefined). 화살표 함수로 바꾸거나 bind(this) 하면 'A' 가 찍힙니다.",
+          "notes": [
+            { "choiceIndex": 0, "label": "'A'", "body": "콜백을 화살표 함수로 바꾸면 외부 this(obj)를 그대로 써서 'A' 가 됩니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q19",
+      "prompt": "DOM 의 `addEventListener('click', handler)` 에 등록된 일반 함수 handler 안의 this 는?",
+      "choices": [
+        "전역 객체(window)",
+        "이벤트 객체",
+        "document",
+        "이벤트가 발생한 요소(currentTarget)"
+      ],
+      "correct_index": 4,
+      "difficulty": 2,
+      "section": "this",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "addEventListener 는 일반 함수 핸들러의 this 를 핸들러를 등록한 요소(currentTarget)로 바인딩합니다. 화살표 함수로 등록하면 이 규칙이 적용되지 않고 외부 this 를 따라갑니다.",
+          "notes": [
+            { "choiceIndex": 1, "label": "이벤트 객체", "body": "이벤트 객체는 첫 번째 인자(event)로 전달됩니다." }
+          ]
+        }
+      }]
+    },
+    {
+      "id": "javascript-scope-closure-this-q20",
+      "prompt": "다음 코드의 결과로 가장 정확한 것은?\n```js\nconst user = { name: 'Kim', greet() { return this.name; } };\nconst { greet } = user;\nconsole.log(greet());\n```",
+      "choices": [
+        "undefined 또는 TypeError (strict)",
+        "'Kim'",
+        "'undefined'",
+        "ReferenceError"
+      ],
+      "correct_index": 1,
+      "difficulty": 2,
+      "section": "this",
+      "explanations": [{
+        "ai": true,
+        "structured": {
+          "summary": "greet 를 디스트럭처링으로 떼어 단독 호출하면 this 바인딩이 풀려, 비-strict 에선 this 가 window(window.name 은 보통 ''), strict/모듈에선 undefined 가 되어 this.name 접근 시 TypeError 가 납니다. greet.call(user) 처럼 명시적으로 묶어야 'Kim' 이 나옵니다.",
+          "notes": [
+            { "choiceIndex": 1, "label": "'Kim'", "body": "this 가 user 에 바인딩되었을 때의 결과로, 호출 형태가 단독이라 그렇게 되지 않습니다." }
+          ]
+        }
+      }]
+    }
+  ]
+}

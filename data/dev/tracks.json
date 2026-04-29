@@ -1,0 +1,51 @@
+{
+  "categories": [
+    {
+      "id": "backend",
+      "title": "백엔드",
+      "description": "서버·DB·API"
+    },
+    {
+      "id": "frontend",
+      "title": "프론트엔드",
+      "description": "JS·React·CSS·브라우저"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "database",
+      "domain": "dev",
+      "categoryId": "backend",
+      "title": "데이터베이스",
+      "description": "인덱스·트랜잭션·쿼리 튜닝 등 RDBMS 핵심"
+    },
+    {
+      "id": "javascript",
+      "domain": "dev",
+      "categoryId": "frontend",
+      "title": "JavaScript",
+      "description": "스코프·클로저·this·이벤트 루프 등 JS 동작 원리"
+    },
+    {
+      "id": "react",
+      "domain": "dev",
+      "categoryId": "frontend",
+      "title": "React",
+      "description": "Hooks·렌더링·메모이제이션 등 모던 React 핵심"
+    },
+    {
+      "id": "html-css",
+      "domain": "dev",
+      "categoryId": "frontend",
+      "title": "HTML / CSS",
+      "description": "박스 모델·Flex/Grid·선택자·캐스케이드"
+    },
+    {
+      "id": "browser-network",
+      "domain": "dev",
+      "categoryId": "frontend",
+      "title": "브라우저 & 네트워크",
+      "description": "렌더링 파이프라인·HTTP·CORS·저장소·캐시"
+    }
+  ]
+}

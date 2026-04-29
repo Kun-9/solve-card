@@ -1,5 +1,4 @@
 export type Domain = "cert" | "dev";
-export type DevCategory = "backend" | "frontend" | "architecture" | "devops";
 
 /**
  * 문제 난이도. 0=하, 1=중, 2=상.
@@ -13,11 +12,17 @@ export const DIFFICULTY_LABEL: Record<Difficulty, string> = {
   2: "상",
 };
 
+export interface CategoryMeta {
+  id: string;
+  title: string;
+  description?: string;
+}
+
 export interface TrackMeta {
   id: string;
   domain: Domain;
-  /** Dev 분야 전용 — 백엔드/프론트/아키/데옵 등 카테고리 */
-  category?: DevCategory;
+  /** Dev 분야 전용 — `QuestionBank.categories[].id` 참조 (자유 슬러그). */
+  categoryId?: string;
   title: string;
   description?: string;
 }
@@ -76,6 +81,8 @@ export interface QuestionBank {
   rounds: Round[];
   /** 트랙(자격증/Dev 트랙) 메타 목록. 없으면 Cert 단일 트랙으로 폴백. */
   tracks?: TrackMeta[];
+  /** Dev 카테고리 메타 목록. 데이터 기반 — 새 카테고리는 data/dev/tracks.json 에 추가. */
+  categories?: CategoryMeta[];
   updatedAt: string;
   /** 메타 모드에서 Home 등이 본문 없이 과목 칩을 그릴 수 있도록 미리 집계한 값. */
   subjects?: SubjectMeta[];

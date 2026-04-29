@@ -11,6 +11,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, "..");
 const SRC_DIR = path.join(ROOT, "cbtbank", "data");
+const DEV_DIR = path.join(ROOT, "data", "dev");
+const DEV_TRACKS_FILE = path.join(DEV_DIR, "tracks.json");
 const PUBLIC_DIR = path.join(ROOT, "public", "data");
 const INDEX_FILE = path.join(PUBLIC_DIR, "index.json");
 const ROUNDS_DIR = path.join(PUBLIC_DIR, "rounds");
@@ -191,6 +193,82 @@ function removeLegacyBundle() {
   }
 }
 
+function readDevMeta() {
+  const empty = { tracks: [], categories: [] };
+  if (!fs.existsSync(DEV_TRACKS_FILE)) return empty;
+  try {
+    const raw = fs.readFileSync(DEV_TRACKS_FILE, "utf8");
+    const data = JSON.parse(raw);
+    const tracks = Array.isArray(data?.tracks)
+      ? data.tracks.filter((t) => t && t.id && t.domain === "dev")
+      : [];
+    const categories = Array.isArray(data?.categories)
+      ? data.categories.filter((c) => c && c.id && c.title)
+      : [];
+    return { tracks, categories };
+  } catch (err) {
+    console.warn(`[build-cbt] dev tracks.json parse 실패: ${err.message}`);
+    return empty;
+  }
+}
+
+function convertDevChapter(filePath, trackId) {
+  const raw = fs.readFileSync(filePath, "utf8");
+  const data = JSON.parse(raw);
+  if (!data || !Array.isArray(data.questions)) {
+    throw new Error(`invalid dev chapter file: ${filePath}`);
+  }
+
+  const questions = data.questions.map((q, idx) => {
+    const correctIndex =
+      (typeof q.correct_index === "number" ? q.correct_index : 1) - 1;
+    const choices = (q.choices ?? []).map((c) => String(c ?? "").trim());
+    const id = q.id ?? `${data.round_id}-q${idx + 1}`;
+    return {
+      id,
+      prompt: String(q.prompt ?? "").trim(),
+      choices,
+      answerIndex: clamp(correctIndex, 0, Math.max(0, choices.length - 1)),
+      explanation: pickExplanation(q.explanations),
+      section: typeof q.section === "string" ? q.section.trim() : undefined,
+      difficulty:
+        typeof q.difficulty === "number" && [0, 1, 2].includes(q.difficulty)
+          ? q.difficulty
+          : undefined,
+    };
+  });
+
+  return {
+    id: data.round_id,
+    trackId: data.trackId ?? trackId,
+    title: data.chapter?.title ?? data.round_id,
+    description: data.chapter?.description,
+    questions,
+  };
+}
+
+function readDevRounds(devTracks) {
+  if (!fs.existsSync(DEV_DIR)) return [];
+  const knownTrackIds = new Set(devTracks.map((t) => t.id));
+  const rounds = [];
+  for (const trackId of knownTrackIds) {
+    const trackDir = path.join(DEV_DIR, trackId);
+    if (!fs.existsSync(trackDir) || !fs.statSync(trackDir).isDirectory()) continue;
+    const files = fs
+      .readdirSync(trackDir)
+      .filter((f) => f.endsWith(".json"))
+      .sort();
+    for (const file of files) {
+      try {
+        rounds.push(convertDevChapter(path.join(trackDir, file), trackId));
+      } catch (err) {
+        console.warn(`[build-cbt] dev chapter skip: ${trackId}/${file} (${err.message})`);
+      }
+    }
+  }
+  return rounds;
+}
+
 function main() {
   if (!fs.existsSync(SRC_DIR)) {
     if (fs.existsSync(INDEX_FILE)) {
@@ -209,48 +287,58 @@ function main() {
   cleanRoundsOutput();
   removeLegacyBundle();
 
-  const rounds = FILES.map(convertFile);
+  const certRounds = FILES.map(convertFile);
+  const devMeta = readDevMeta();
+  const devRounds = readDevRounds(devMeta.tracks);
+  const allRounds = [...certRounds, ...devRounds];
   const updatedAt = new Date().toISOString();
 
   fs.mkdirSync(ROUNDS_DIR, { recursive: true });
   const versions = new Map();
-  for (const round of rounds) {
+  for (const round of allRounds) {
     const file = path.join(ROUNDS_DIR, `${round.id}.json`);
     fs.writeFileSync(file, JSON.stringify(round));
     versions.set(round.id, hashRoundPayload(round));
   }
 
   const tracksUsed = new Map();
-  for (const r of rounds) {
+  for (const r of certRounds) {
     const prefix = categoryFromRoundId(r.id);
     const meta = TRACK_BY_PREFIX[prefix];
     if (meta && !tracksUsed.has(meta.id)) tracksUsed.set(meta.id, meta);
   }
+  for (const t of devMeta.tracks) {
+    if (!tracksUsed.has(t.id)) tracksUsed.set(t.id, t);
+  }
 
   const manifest = {
     tracks: [...tracksUsed.values()],
-    rounds: rounds.map((r) => ({
-      id: r.id,
-      trackId: r.trackId,
-      category: categoryFromRoundId(r.id),
-      date: r.date,
-      title: r.title,
-      description: r.description,
-      questionCount: r.questions.length,
-      version: versions.get(r.id),
-    })),
-    subjects: aggregateSubjects(rounds),
+    categories: devMeta.categories,
+    rounds: allRounds.map((r) => {
+      const isCert = !!TRACK_BY_PREFIX[categoryFromRoundId(r.id)];
+      return {
+        id: r.id,
+        trackId: r.trackId,
+        ...(isCert ? { category: categoryFromRoundId(r.id) } : {}),
+        ...(r.date ? { date: r.date } : {}),
+        title: r.title,
+        description: r.description,
+        questionCount: r.questions.length,
+        version: versions.get(r.id),
+      };
+    }),
+    subjects: aggregateSubjects(certRounds),
     updatedAt,
   };
   fs.mkdirSync(path.dirname(INDEX_FILE), { recursive: true });
   fs.writeFileSync(INDEX_FILE, JSON.stringify(manifest));
 
-  const totalQuestions = rounds.reduce((sum, r) => sum + r.questions.length, 0);
-  const totalImages = rounds.reduce(
+  const totalQuestions = allRounds.reduce((sum, r) => sum + r.questions.length, 0);
+  const totalImages = allRounds.reduce(
     (sum, r) => sum + r.questions.filter((q) => q.imageUrl).length,
     0,
   );
-  const totalChoiceImages = rounds.reduce(
+  const totalChoiceImages = allRounds.reduce(
     (sum, r) =>
       sum +
       r.questions.reduce(
@@ -261,7 +349,7 @@ function main() {
     0,
   );
   const indexKb = (fs.statSync(INDEX_FILE).size / 1024).toFixed(1);
-  const roundsKb = rounds
+  const roundsKb = allRounds
     .reduce(
       (sum, r) =>
         sum +
@@ -270,7 +358,7 @@ function main() {
     )
     .toFixed(1);
   console.log(
-    `[build-cbt] wrote ${rounds.length} rounds · ${totalQuestions} questions · ${totalImages} body img · ${totalChoiceImages} choice img · index ${indexKb} KB · rounds ${roundsKb} KB → ${path.relative(ROOT, PUBLIC_DIR)}`,
+    `[build-cbt] wrote ${certRounds.length} cert + ${devRounds.length} dev rounds · ${totalQuestions} questions · ${totalImages} body img · ${totalChoiceImages} choice img · index ${indexKb} KB · rounds ${roundsKb} KB → ${path.relative(ROOT, PUBLIC_DIR)}`,
   );
 }
 

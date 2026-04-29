@@ -1,4 +1,5 @@
 import type {
+  CategoryMeta,
   QuestionBank,
   Round,
   RoundResult,
@@ -30,6 +31,7 @@ interface ManifestEntry {
 interface Manifest {
   rounds: ManifestEntry[];
   tracks?: TrackMeta[];
+  categories?: CategoryMeta[];
   subjects?: SubjectMeta[];
   updatedAt?: string;
 }
@@ -99,6 +101,7 @@ function metaBankFromManifest(manifest: Manifest): QuestionBank {
       date: entry.date,
     })),
     tracks: manifest.tracks,
+    categories: manifest.categories,
     subjects: manifest.subjects,
     updatedAt: manifest.updatedAt ?? "",
   };
@@ -116,6 +119,7 @@ function manifestFromBank(bank: QuestionBank, version: string): Manifest {
       date: r.date,
     })),
     tracks: bank.tracks,
+    categories: bank.categories,
     subjects: bank.subjects,
     updatedAt: bank.updatedAt || version,
   };
@@ -243,6 +247,7 @@ export async function ensureAllRounds(): Promise<QuestionBank> {
   return {
     rounds,
     tracks: meta.tracks,
+    categories: meta.categories,
     subjects: meta.subjects,
     updatedAt: meta.updatedAt ?? "",
   };
@@ -264,6 +269,7 @@ export function saveBank(bank: QuestionBank): void {
       date: r.date,
     })),
     tracks: bank.tracks,
+    categories: bank.categories,
     subjects: bank.subjects,
     updatedAt: USER_VERSION,
   };

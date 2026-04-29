@@ -1,5 +1,6 @@
 import type {
   CategoryMeta,
+  InProgressSession,
   QuestionBank,
   Round,
   RoundResult,
@@ -10,18 +11,22 @@ import type {
 import { SEED_BANK } from "./seed";
 import {
   bulkInsertAttempts,
+  deleteUserInProgress,
   fetchAttempts,
   fetchLegacyHistoryImported,
+  fetchUserInProgress,
   fetchUserManifestOverlay,
   fetchUserRoundOverlays,
   insertAttempt,
   setLegacyHistoryImported,
+  upsertUserInProgress,
   upsertUserManifestOverlay,
   upsertUserRoundOverlay,
   type UserManifestPatch,
 } from "./cloud";
 
 const HISTORY_KEY = "solve-card:history:v1";
+const IN_PROGRESS_KEY = "solve-card:in-progress:v1";
 const MANIFEST_KEY = "solve-card:manifest:v3";
 const ROUND_KEY_PREFIX = "solve-card:round:v3:";
 const USER_VERSION = "user-modified";
@@ -489,6 +494,52 @@ export function appendResult(result: RoundResult): ScoreHistory {
 
 export function clearHistory(): void {
   if (isBrowser) localStorage.removeItem(HISTORY_KEY);
+}
+
+/* ──────────────── in-progress sessions ──────────────── */
+
+type InProgressMap = Record<string, InProgressSession>;
+
+function readInProgressLocal(): InProgressMap {
+  if (!isBrowser) return {};
+  return safeParse<InProgressMap>(localStorage.getItem(IN_PROGRESS_KEY)) ?? {};
+}
+
+function writeInProgressLocal(map: InProgressMap): void {
+  if (!isBrowser) return;
+  localStorage.setItem(IN_PROGRESS_KEY, JSON.stringify(map));
+}
+
+/** 게스트는 localStorage, 로그인은 cloud + localStorage 머지(cloud 우선). */
+export async function loadInProgressSessions(): Promise<InProgressMap> {
+  if (!isBrowser) return {};
+  if (!currentUserId) return readInProgressLocal();
+  const cloud = await fetchUserInProgress(currentUserId);
+  // localStorage 캐시 갱신 (read-through)
+  writeInProgressLocal(cloud);
+  return cloud;
+}
+
+export function saveInProgressSession(session: InProgressSession): void {
+  if (!isBrowser) return;
+  const map = readInProgressLocal();
+  map[session.roundId] = session;
+  writeInProgressLocal(map);
+  if (currentUserId) {
+    void upsertUserInProgress(currentUserId, session);
+  }
+}
+
+export function clearInProgressSession(roundId: string): void {
+  if (!isBrowser) return;
+  const map = readInProgressLocal();
+  if (roundId in map) {
+    delete map[roundId];
+    writeInProgressLocal(map);
+  }
+  if (currentUserId) {
+    void deleteUserInProgress(currentUserId, roundId);
+  }
 }
 
 export function exportBankToFile(bank: QuestionBank, filename = "questions.json"): void {

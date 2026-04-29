@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type {
   CategoryMeta,
   Domain,
+  InProgressSession,
   QuestionBank,
   TrackMeta,
 } from "../types";
@@ -11,6 +12,9 @@ interface HomeHubProps {
   onSelectTrack: (track: TrackMeta) => void;
   onSelectCategory: (categoryId: string) => void;
   onManage: () => void;
+  inProgress?: InProgressSession[];
+  onResume?: (roundId: string) => void;
+  onDiscardInProgress?: (roundId: string) => void;
 }
 
 const FALLBACK_CERT_TRACK: TrackMeta = {
@@ -25,7 +29,14 @@ interface TrackStat {
   questions: number;
 }
 
-export function HomeHub({ bank, onSelectTrack, onSelectCategory }: HomeHubProps) {
+export function HomeHub({
+  bank,
+  onSelectTrack,
+  onSelectCategory,
+  inProgress = [],
+  onResume,
+  onDiscardInProgress,
+}: HomeHubProps) {
   const [domain, setDomain] = useState<Domain>("cert");
 
   const tracks = useMemo<TrackMeta[]>(() => {
@@ -111,8 +122,37 @@ export function HomeHub({ bank, onSelectTrack, onSelectCategory }: HomeHubProps)
     { tracks: 0, questions: 0 },
   );
 
+  const sortedInProgress = useMemo(
+    () =>
+      [...inProgress].sort((a, b) =>
+        b.updatedAt.localeCompare(a.updatedAt),
+      ),
+    [inProgress],
+  );
+
   return (
     <div className="stack-xl stack">
+      {sortedInProgress.length > 0 && onResume && (
+        <section className="stack" style={{ gap: 8 }}>
+          <h2 className="caption" style={{ fontWeight: 600 }}>
+            이어 풀기
+          </h2>
+          <div className="stack" style={{ gap: 8 }}>
+            {sortedInProgress.map((s) => (
+              <ResumeCard
+                key={s.roundId}
+                session={s}
+                onResume={() => onResume(s.roundId)}
+                onDiscard={
+                  onDiscardInProgress
+                    ? () => onDiscardInProgress(s.roundId)
+                    : undefined
+                }
+              />
+            ))}
+          </div>
+        </section>
+      )}
       <section className="stack" style={{ gap: 16 }}>
         <div className="chip-row" role="radiogroup" aria-label="분야 선택">
           <button
@@ -230,5 +270,54 @@ function CertTrackCard({
         </span>
       </div>
     </button>
+  );
+}
+
+interface ResumeCardProps {
+  session: InProgressSession;
+  onResume: () => void;
+  onDiscard?: () => void;
+}
+
+function ResumeCard({ session, onResume, onDiscard }: ResumeCardProps) {
+  const answered = Object.keys(session.selections).length;
+  const total = session.total;
+  const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
+  return (
+    <div className="card resume-card">
+      <button
+        type="button"
+        className="resume-card-main"
+        onClick={onResume}
+        aria-label={`${session.roundTitle} 이어서 풀기`}
+      >
+        <div className="stack" style={{ gap: 8 }}>
+          <span className="caption">
+            {answered}/{total} · {pct}% 진행
+          </span>
+          <h3 className="h-card">{session.roundTitle}</h3>
+          {session.sourceLabel && session.sourceLabel !== session.roundTitle && (
+            <span className="caption muted">{session.sourceLabel}</span>
+          )}
+          <div className="progress-bar" aria-hidden>
+            <span style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      </button>
+      {onDiscard && (
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm resume-card-discard"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (window.confirm("이 이어풀기 세션을 버리시겠어요?")) {
+              onDiscard();
+            }
+          }}
+        >
+          버리기
+        </button>
+      )}
+    </div>
   );
 }

@@ -4,6 +4,11 @@ import { choiceLabel, resolveImageUrl } from "../lib/utils";
 import { Explanation } from "./Explanation";
 import { Markdown } from "./Markdown";
 
+interface QuizProgress {
+  currentIndex: number;
+  selections: Record<string, number>;
+}
+
 interface QuizProps {
   round: Round;
   mode: "ordered" | "random";
@@ -11,6 +16,10 @@ interface QuizProps {
   onFinish: (result: RoundResult) => void;
   onExit: () => void;
   onAttemptedChange?: (attempted: boolean) => void;
+  /** 이어풀기용 초기 진행도. ordered 모드에서만 의미 있음. */
+  initialProgress?: QuizProgress;
+  /** 답 선택/이동 시 호출. ordered 모드에서만 부모가 넘김. */
+  onProgress?: (progress: QuizProgress) => void;
 }
 
 interface AttemptState {
@@ -18,10 +27,29 @@ interface AttemptState {
   revealed: boolean;
 }
 
-export function Quiz({ round, mode, sourceLabel, onFinish, onExit, onAttemptedChange }: QuizProps) {
-  const [index, setIndex] = useState(0);
+export function Quiz({
+  round,
+  mode,
+  sourceLabel,
+  onFinish,
+  onExit,
+  onAttemptedChange,
+  initialProgress,
+  onProgress,
+}: QuizProps) {
+  const [index, setIndex] = useState(() => {
+    const i = initialProgress?.currentIndex ?? 0;
+    if (i < 0 || i >= round.questions.length) return 0;
+    return i;
+  });
   const [attempts, setAttempts] = useState<AttemptState[]>(() =>
-    round.questions.map(() => ({ selectedIndex: null, revealed: false })),
+    round.questions.map((q) => {
+      const sel = initialProgress?.selections?.[q.id];
+      if (typeof sel === "number") {
+        return { selectedIndex: sel, revealed: true };
+      }
+      return { selectedIndex: null, revealed: false };
+    }),
   );
   const startedAt = useRef<number>(Date.now());
 
@@ -46,6 +74,20 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit, onAttemptedCh
     onAttemptedChange?.(attempts.some((a) => a.revealed));
   }, [attempts, onAttemptedChange]);
 
+  // 답이 한 개라도 공개된 시점부터 onProgress 발행
+  useEffect(() => {
+    if (!onProgress) return;
+    if (!attempts.some((a) => a.revealed)) return;
+    const selections: Record<string, number> = {};
+    attempts.forEach((a, i) => {
+      if (a.revealed && a.selectedIndex !== null) {
+        const q = round.questions[i];
+        if (q) selections[q.id] = a.selectedIndex;
+      }
+    });
+    onProgress({ currentIndex: index, selections });
+  }, [attempts, index, onProgress, round.questions]);
+
   useEffect(() => {
     return () => onAttemptedChange?.(false);
   }, [onAttemptedChange]);
@@ -60,10 +102,15 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit, onAttemptedCh
         return;
       }
       if (attemptsRef.current.some((a) => a.revealed)) {
-        const ok = window.confirm("나가면 진행한 답변이 사라져요. 그만두시겠어요?");
-        if (!ok) {
-          window.history.pushState({ quizGuard: true }, "");
-          return;
+        // ordered 모드는 자동 저장되므로 confirm 생략
+        if (mode !== "ordered") {
+          const ok = window.confirm(
+            "나가면 진행한 답변이 사라져요. 그만두시겠어요?",
+          );
+          if (!ok) {
+            window.history.pushState({ quizGuard: true }, "");
+            return;
+          }
         }
         onAttemptedChange?.(false);
       }
@@ -88,7 +135,7 @@ export function Quiz({ round, mode, sourceLabel, onFinish, onExit, onAttemptedCh
         window.history.back();
       }
     };
-  }, [onExit, onAttemptedChange]);
+  }, [mode, onExit, onAttemptedChange]);
 
   function selectChoice(choiceIndex: number) {
     if (attempt.revealed) return;

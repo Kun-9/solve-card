@@ -113,3 +113,19 @@ export interface RoundResult {
 }
 
 export type ScoreHistory = Record<string, RoundResult[]>;
+
+/**
+ * 이어풀기용 미완료 세션 스냅샷.
+ * - ordered 모드 한정 (random 은 셔플 결과가 매번 달라져 미저장)
+ * - selections 는 questionId → 선택 보기 인덱스
+ */
+export interface InProgressSession {
+  roundId: string;
+  roundTitle: string;
+  sourceLabel: string;
+  total: number;
+  startedAt: string;
+  updatedAt: string;
+  currentIndex: number;
+  selections: Record<string, number>;
+}

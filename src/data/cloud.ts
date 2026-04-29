@@ -1,5 +1,6 @@
 import type {
   CategoryMeta,
+  InProgressSession,
   Round,
   RoundResult,
   ScoreHistory,
@@ -178,4 +179,47 @@ export async function setLegacyHistoryImported(userId: string): Promise<void> {
     legacy_history_imported: true,
     updated_at: new Date().toISOString(),
   });
+}
+
+/* ──────────────── user_in_progress ──────────────── */
+
+export async function fetchUserInProgress(
+  userId: string,
+): Promise<Record<string, InProgressSession>> {
+  const out: Record<string, InProgressSession> = {};
+  if (!supabase) return out;
+  const { data, error } = await supabase
+    .from("user_in_progress")
+    .select("round_id, session")
+    .eq("user_id", userId);
+  if (error || !data) return out;
+  for (const row of data) {
+    out[row.round_id as string] = row.session as InProgressSession;
+  }
+  return out;
+}
+
+export async function upsertUserInProgress(
+  userId: string,
+  session: InProgressSession,
+): Promise<void> {
+  if (!supabase) return;
+  await supabase.from("user_in_progress").upsert({
+    user_id: userId,
+    round_id: session.roundId,
+    session,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+export async function deleteUserInProgress(
+  userId: string,
+  roundId: string,
+): Promise<void> {
+  if (!supabase) return;
+  await supabase
+    .from("user_in_progress")
+    .delete()
+    .eq("user_id", userId)
+    .eq("round_id", roundId);
 }

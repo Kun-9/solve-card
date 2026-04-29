@@ -601,6 +601,34 @@ main {
   }
 }
 
+/* Resume (이어 풀기) */
+.resume-card {
+  position: relative;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  background: var(--cream-soft);
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.resume-card:hover {
+  border-color: var(--hairline-strong);
+}
+.resume-card-main {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 18px 20px;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--r-card);
+}
+.resume-card-discard {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
 /* ─────────────────────────────────────────────
    Form
    ───────────────────────────────────────────── */

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   Difficulty,
+  InProgressSession,
   QuestionBank,
   Round,
   RoundResult,
@@ -8,13 +9,16 @@ import type {
 } from "./types";
 import {
   appendResult,
+  clearInProgressSession,
   ensureAllRounds,
   ensureRound,
   loadBankAsync,
   loadHistory,
   loadHistoryAsync,
+  loadInProgressSessions,
   migrateLegacyHistoryIfNeeded,
   saveBank,
+  saveInProgressSession,
   setAuthUserId,
 } from "./data/storage";
 import { HomeHub } from "./components/HomeHub";
@@ -34,6 +38,11 @@ type EntryRoute =
   | { name: "dev-category"; categoryId: string }
   | { name: "dev-track"; trackId: string };
 
+interface QuizProgressState {
+  currentIndex: number;
+  selections: Record<string, number>;
+}
+
 type Route =
   | EntryRoute
   | {
@@ -42,6 +51,8 @@ type Route =
       mode: "ordered" | "random";
       sourceLabel: string;
       origin: EntryRoute;
+      startedAt: string;
+      initialProgress?: QuizProgressState;
     }
   | { name: "result"; result: RoundResult; origin: EntryRoute }
   | { name: "manage" };
@@ -61,6 +72,7 @@ export function App() {
 
   const [bank, setBank] = useState<QuestionBank>(EMPTY_BANK);
   const [history, setHistory] = useState(() => loadHistory());
+  const [inProgress, setInProgress] = useState<Record<string, InProgressSession>>({});
   const [route, setRoute] = useState<Route>({ name: "home" });
   const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
 
@@ -74,13 +86,15 @@ export function App() {
         if (userId) {
           await migrateLegacyHistoryIfNeeded(userId);
         }
-        const [nextBank, nextHistory] = await Promise.all([
+        const [nextBank, nextHistory, nextInProgress] = await Promise.all([
           loadBankAsync(),
           loadHistoryAsync(),
+          loadInProgressSessions(),
         ]);
         if (cancelled) return;
         setBank(nextBank);
         setHistory(nextHistory);
+        setInProgress(nextInProgress);
         setBootState("ready");
       } catch {
         if (cancelled) return;
@@ -115,10 +129,15 @@ export function App() {
 
   const requestExitQuiz = useCallback(() => {
     if (!quizAttemptedRef.current) return true;
+    // ordered 모드는 [이어 풀기]에 자동 저장되므로 confirm 생략
+    if (route.name === "quiz" && route.mode === "ordered") {
+      quizAttemptedRef.current = false;
+      return true;
+    }
     const ok = window.confirm("나가면 진행한 답변이 사라져요. 그만두시겠어요?");
     if (ok) quizAttemptedRef.current = false;
     return ok;
-  }, []);
+  }, [route]);
 
   const goHome = useCallback(() => {
     if (!requestExitQuiz()) return;
@@ -154,13 +173,56 @@ export function App() {
     const full = await ensureRound(meta.id);
     if (!full || full.questions.length === 0) return;
     const questions = shuffled ? shuffle(full.questions) : full.questions;
+    // ordered 모드 새로 시작 = 같은 round의 미완료 세션은 폐기
+    if (!shuffled) {
+      clearInProgressSession(full.id);
+      setInProgress((m) => {
+        if (!(full.id in m)) return m;
+        const next = { ...m };
+        delete next[full.id];
+        return next;
+      });
+    }
     setRoute((prev) => ({
       name: "quiz",
       round: { ...full, questions },
       mode: shuffled ? "random" : "ordered",
       sourceLabel: shuffled ? `${full.title} · 셔플` : full.title,
       origin: originOf(prev),
+      startedAt: new Date().toISOString(),
     }));
+  }, []);
+
+  const resumeRound = useCallback(
+    async (roundId: string) => {
+      const session = inProgress[roundId];
+      if (!session) return;
+      const full = await ensureRound(roundId);
+      if (!full || full.questions.length === 0) return;
+      setRoute((prev) => ({
+        name: "quiz",
+        round: full,
+        mode: "ordered",
+        sourceLabel: session.sourceLabel || full.title,
+        origin: originOf(prev),
+        startedAt: session.startedAt,
+        initialProgress: {
+          currentIndex: session.currentIndex,
+          selections: session.selections,
+        },
+      }));
+    },
+    [inProgress],
+  );
+
+  const discardInProgress = useCallback((roundId: string) => {
+    clearInProgressSession(roundId);
+    setInProgress((m) => {
+      if (!(roundId in m)) return m;
+      const next = { ...m };
+      delete next[roundId];
+      return next;
+    });
   }, []);
 
   const startRandom = useCallback(
@@ -210,14 +272,42 @@ export function App() {
         mode: "random",
         sourceLabel: label,
         origin: originOf(prev),
+        startedAt: new Date().toISOString(),
       }));
     },
     [],
   );
 
+  const handleQuizProgress = useCallback(
+    (progress: QuizProgressState) => {
+      if (route.name !== "quiz") return;
+      if (route.mode !== "ordered") return;
+      const session: InProgressSession = {
+        roundId: route.round.id,
+        roundTitle: route.round.title,
+        sourceLabel: route.sourceLabel,
+        total: route.round.questions.length,
+        startedAt: route.startedAt,
+        updatedAt: new Date().toISOString(),
+        currentIndex: progress.currentIndex,
+        selections: progress.selections,
+      };
+      saveInProgressSession(session);
+      setInProgress((m) => ({ ...m, [session.roundId]: session }));
+    },
+    [route],
+  );
+
   const finishQuiz = useCallback((result: RoundResult) => {
     const next = appendResult(result);
     setHistory(next);
+    clearInProgressSession(result.roundId);
+    setInProgress((m) => {
+      if (!(result.roundId in m)) return m;
+      const out = { ...m };
+      delete out[result.roundId];
+      return out;
+    });
     setRoute((prev) => ({
       name: "result",
       result,
@@ -277,6 +367,9 @@ export function App() {
               onSelectTrack={goTrack}
               onSelectCategory={goCategory}
               onManage={goManage}
+              inProgress={Object.values(inProgress)}
+              onResume={resumeRound}
+              onDiscardInProgress={discardInProgress}
             />
           )}
           {route.name === "cert" && (
@@ -319,6 +412,10 @@ export function App() {
               onFinish={finishQuiz}
               onExit={exitQuiz}
               onAttemptedChange={handleQuizAttemptedChange}
+              initialProgress={route.initialProgress}
+              onProgress={
+                route.mode === "ordered" ? handleQuizProgress : undefined
+              }
             />
           )}
           {route.name === "result" && (

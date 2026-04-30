@@ -83,14 +83,7 @@ npm run preview
 ## 기술 스택
 
 - Vite + React + TypeScript
-- localStorage (백엔드 없음)
-
-## 배포
-
-`main` 브랜치에 푸시되면 GitHub Actions가 GitHub Pages로 자동 배포합니다
-(`.github/workflows/deploy.yml`).
-
-최초 1회는 저장소 **Settings → Pages → Build and deployment → Source**를
+- localStorage (백엔드 없음)rce**를
 **GitHub Actions**로 변경해야 합니다.
 
 ## 데이터 출처

@@ -283,6 +283,22 @@ export async function upsertUserFavorite(
   });
 }
 
+export async function upsertUserFavorites(
+  userId: string,
+  entries: FavoriteEntry[],
+): Promise<void> {
+  if (!supabase || entries.length === 0) return;
+  await supabase.from("user_question_favorites").upsert(
+    entries.map((entry) => ({
+      user_id: userId,
+      question_id: entry.questionId,
+      round_id: entry.roundId,
+      track_id: entry.trackId ?? null,
+      added_at: entry.addedAt,
+    })),
+  );
+}
+
 export async function deleteUserFavorite(
   userId: string,
   questionId: string,

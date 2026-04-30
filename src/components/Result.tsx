@@ -7,10 +7,10 @@ import { Markdown } from "./Markdown";
 
 interface ResultProps {
   result: RoundResult;
-  onRetry: () => void;
-  onHome: () => void;
+  onClose: () => void;
   favorites: FavoriteMap;
   onToggleFavorite: (entry: FavoriteEntry) => void;
+  onBulkAddFavorites: (entries: FavoriteEntry[]) => void;
   onBulkRemoveFavorites: (questionIds: string[]) => void;
   /** 결과 회차의 trackId. 즐겨찾기 추가 시 동일 트랙으로 묶이도록 함. */
   roundTrackId?: string;
@@ -18,15 +18,20 @@ interface ResultProps {
 
 export function Result({
   result,
-  onRetry,
-  onHome,
+  onClose,
   favorites,
   onToggleFavorite,
+  onBulkAddFavorites,
   onBulkRemoveFavorites,
   roundTrackId,
 }: ResultProps) {
   const rate = result.total === 0 ? 0 : Math.round((result.correct / result.total) * 100);
   const wrong = result.logs.filter((l) => !l.correct);
+
+  const wrongUnfavored = useMemo(
+    () => wrong.filter((l) => !favorites[l.questionId]),
+    [wrong, favorites],
+  );
 
   const correctlyFavored = useMemo(
     () =>
@@ -106,9 +111,25 @@ export function Result({
       )}
 
       <section className="stack">
-        <div className="row row-between">
-          <h2 className="h-section">오답 노트</h2>
-          <span className="caption">{wrong.length}개</span>
+        <div className="row row-between" style={{ alignItems: "center" }}>
+          <div className="row" style={{ gap: 10, alignItems: "baseline" }}>
+            <h2 className="h-section">오답 노트</h2>
+            <span className="caption">{wrong.length}개</span>
+          </div>
+          {wrongUnfavored.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() =>
+                onBulkAddFavorites(
+                  wrongUnfavored.map((l) => makeEntry(l.questionId)),
+                )
+              }
+              title="오답 전체를 즐겨찾기에 추가"
+            >
+              ⭐ 오답 모두 즐겨찾기 ({wrongUnfavored.length})
+            </button>
+          )}
         </div>
         {wrong.length === 0 ? (
           <div className="card empty">
@@ -173,11 +194,8 @@ export function Result({
       </section>
 
       <div className="row">
-        <button type="button" className="btn btn-primary btn-lg" onClick={onRetry}>
-          다시 풀기
-        </button>
-        <button type="button" className="btn btn-ghost btn-lg" onClick={onHome}>
-          홈으로
+        <button type="button" className="btn btn-primary btn-lg" onClick={onClose}>
+          닫기
         </button>
       </div>
     </div>

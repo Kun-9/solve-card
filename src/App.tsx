@@ -14,6 +14,7 @@ import type {
 import {
   addBookmark,
   addFavorite,
+  addFavoritesBulk,
   appendResult,
   clearInProgressSession,
   ensureAllRounds,
@@ -50,7 +51,8 @@ type EntryRoute =
   | { name: "home"; domain?: Domain }
   | { name: "cert"; trackId: string }
   | { name: "dev-category"; categoryId: string }
-  | { name: "dev-track"; trackId: string };
+  | { name: "dev-track"; trackId: string }
+  | { name: "bookmarks"; favoriteTrackId?: string | null };
 
 interface QuizProgressState {
   currentIndex: number;
@@ -69,13 +71,11 @@ type Route =
       initialProgress?: QuizProgressState;
     }
   | { name: "result"; result: RoundResult; origin: EntryRoute }
-  | { name: "manage" }
-  | { name: "bookmarks" };
+  | { name: "manage" };
 
 function originOf(prev: Route): EntryRoute {
   if (prev.name === "quiz" || prev.name === "result") return prev.origin;
-  if (prev.name === "manage" || prev.name === "bookmarks")
-    return { name: "home" };
+  if (prev.name === "manage") return { name: "home" };
   return prev;
 }
 
@@ -265,6 +265,11 @@ export function App() {
     [],
   );
 
+  const bulkAddFavorites = useCallback((entries: FavoriteEntry[]) => {
+    if (entries.length === 0) return;
+    setFavorites(addFavoritesBulk(entries));
+  }, []);
+
   const bulkRemoveFavorites = useCallback((questionIds: string[]) => {
     if (questionIds.length === 0) return;
     setFavorites(removeFavoritesBulk(questionIds));
@@ -447,7 +452,11 @@ export function App() {
   const finishQuiz = useCallback((result: RoundResult) => {
     // 미리보기는 결과 화면을 띄우지 않고 곧장 북마크로 복귀
     if (result.roundId.startsWith(FAVORITE_PREVIEW_PREFIX)) {
-      setRoute({ name: "bookmarks" });
+      setRoute((prev) =>
+        prev.name === "quiz" && prev.origin.name === "bookmarks"
+          ? prev.origin
+          : { name: "bookmarks" },
+      );
       return;
     }
     const next = appendResult(result);
@@ -470,16 +479,6 @@ export function App() {
     if (!(await requestExitQuiz())) return;
     setRoute((prev) => (prev.name === "quiz" ? prev.origin : { name: "home" }));
   }, [requestExitQuiz]);
-
-  const retry = useCallback(async () => {
-    if (route.name !== "result") return;
-    const sourceRound = bank.rounds.find((r) => r.id === route.result.roundId);
-    if (sourceRound) {
-      await startRound(sourceRound);
-    } else {
-      await startRandom();
-    }
-  }, [route, bank, startRound, startRandom]);
 
   const totalQuestions = useMemo(
     () =>
@@ -598,10 +597,10 @@ export function App() {
           {route.name === "result" && (
             <Result
               result={route.result}
-              onRetry={retry}
-              onHome={goHome}
+              onClose={() => setRoute(route.origin)}
               favorites={favorites}
               onToggleFavorite={toggleFavorite}
+              onBulkAddFavorites={bulkAddFavorites}
               onBulkRemoveFavorites={bulkRemoveFavorites}
               roundTrackId={
                 bank.rounds.find((r) => r.id === route.result.roundId)?.trackId
@@ -625,6 +624,14 @@ export function App() {
               onToggleBookmark={toggleBookmark}
               onStartRound={(round, shuffled) => startRound(round, shuffled)}
               onStartVirtualRound={startVirtualRound}
+              favoriteTrackId={route.favoriteTrackId}
+              onSetFavoriteTrack={(id) =>
+                setRoute(
+                  id === undefined
+                    ? { name: "bookmarks" }
+                    : { name: "bookmarks", favoriteTrackId: id },
+                )
+              }
             />
           )}
         </div>

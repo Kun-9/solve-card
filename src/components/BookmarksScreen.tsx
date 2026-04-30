@@ -26,6 +26,8 @@ interface BookmarksScreenProps {
   onToggleBookmark: (roundId: string) => void;
   onStartRound: (round: Round, shuffled: boolean) => void;
   onStartVirtualRound: (round: Round, label: string) => void;
+  favoriteTrackId?: string | null;
+  onSetFavoriteTrack: (trackId: string | null | undefined) => void;
 }
 
 export function BookmarksScreen({
@@ -36,10 +38,13 @@ export function BookmarksScreen({
   onToggleBookmark,
   onStartRound,
   onStartVirtualRound,
+  favoriteTrackId,
+  onSetFavoriteTrack,
 }: BookmarksScreenProps) {
-  const [tab, setTab] = useState<Tab>("rounds");
+  const [tab, setTab] = useState<Tab>(
+    favoriteTrackId !== undefined ? "favorites" : "rounds",
+  );
   const [groups, setGroups] = useState<FavoriteGroup[]>([]);
-  const [drilldownTrackId, setDrilldownTrackId] = useState<string | null | "__pending">("__pending");
   const [resolving, setResolving] = useState(false);
 
   const trackTitleOf = useMemo(() => {
@@ -75,15 +80,15 @@ export function BookmarksScreen({
   }, [bank.rounds, bookmarks]);
 
   const drilldownGroup =
-    drilldownTrackId !== "__pending"
-      ? groups.find((g) => (g.trackId ?? null) === drilldownTrackId) ?? null
+    favoriteTrackId !== undefined
+      ? groups.find((g) => (g.trackId ?? null) === favoriteTrackId) ?? null
       : null;
 
   if (drilldownGroup) {
     return (
       <FavoritesDrilldown
         group={drilldownGroup}
-        onBack={() => setDrilldownTrackId("__pending")}
+        onBack={() => onSetFavoriteTrack(undefined)}
         onToggleFavorite={onToggleFavorite}
         onStart={(round, label) => onStartVirtualRound(round, label)}
         onPreview={(resolved) => {
@@ -121,6 +126,7 @@ export function BookmarksScreen({
       {tab === "rounds" ? (
         <RoundsTab
           rounds={bookmarkedRounds}
+          trackTitleOf={trackTitleOf}
           onStart={onStartRound}
           onToggleBookmark={onToggleBookmark}
         />
@@ -128,7 +134,7 @@ export function BookmarksScreen({
         <FavoritesTab
           groups={groups}
           loading={resolving}
-          onPick={(trackId) => setDrilldownTrackId(trackId)}
+          onPick={(trackId) => onSetFavoriteTrack(trackId)}
         />
       )}
     </div>
@@ -137,11 +143,17 @@ export function BookmarksScreen({
 
 interface RoundsTabProps {
   rounds: Round[];
+  trackTitleOf: (id: string) => string | undefined;
   onStart: (round: Round, shuffled: boolean) => void;
   onToggleBookmark: (roundId: string) => void;
 }
 
-function RoundsTab({ rounds, onStart, onToggleBookmark }: RoundsTabProps) {
+function RoundsTab({
+  rounds,
+  trackTitleOf,
+  onStart,
+  onToggleBookmark,
+}: RoundsTabProps) {
   if (rounds.length === 0) {
     return (
       <div className="bookmarks-empty card empty">
@@ -165,7 +177,10 @@ function RoundsTab({ rounds, onStart, onToggleBookmark }: RoundsTabProps) {
               disabled={count === 0}
             >
               <div className="stack" style={{ gap: 14 }}>
-                <span className="caption">{round.trackId ?? "회차"}</span>
+                <span className="caption">
+                  {(round.trackId ? trackTitleOf(round.trackId) : null) ??
+                    "회차"}
+                </span>
                 <h3 className="h-card">{round.title}</h3>
                 <span className="caption">{count}문제</span>
               </div>

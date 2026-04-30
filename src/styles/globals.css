@@ -1790,12 +1790,11 @@ main {
   border-radius: var(--r-pill);
   color: var(--charcoal-40);
   cursor: pointer;
-  transition: color 120ms ease, background-color 120ms ease, transform 80ms ease;
+  transition: color 120ms ease, transform 80ms ease;
 }
 
 .favorite-star:hover,
 .round-bookmark-btn:hover {
-  background: var(--charcoal-04);
   color: var(--charcoal);
 }
 

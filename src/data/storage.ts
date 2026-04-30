@@ -30,6 +30,7 @@ import {
   setLegacyHistoryImported,
   upsertUserBookmark,
   upsertUserFavorite,
+  upsertUserFavorites,
   upsertUserInProgress,
   upsertUserManifestOverlay,
   upsertUserRoundOverlay,
@@ -628,6 +629,23 @@ export function removeFavorite(questionId: string): FavoriteMap {
   }
   if (currentUserId) {
     void deleteUserFavorite(currentUserId, questionId);
+  }
+  return map;
+}
+
+export function addFavoritesBulk(entries: FavoriteEntry[]): FavoriteMap {
+  if (entries.length === 0) return readFavoritesLocal();
+  const map = readFavoritesLocal();
+  const added: FavoriteEntry[] = [];
+  for (const entry of entries) {
+    if (!(entry.questionId in map)) {
+      map[entry.questionId] = entry;
+      added.push(entry);
+    }
+  }
+  if (added.length > 0) writeFavoritesLocal(map);
+  if (currentUserId && added.length > 0) {
+    void upsertUserFavorites(currentUserId, added);
   }
   return map;
 }

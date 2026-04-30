@@ -10,13 +10,14 @@ import {
 import { useConfirm } from "./ConfirmDialog";
 
 interface TopbarProps {
-  current: "home" | "manage";
+  current: "home" | "manage" | "bookmarks";
   backLabel?: string;
   onBack?: () => void;
   activeDomain?: Domain;
   onSwitchDomain?: (domain: Domain) => void;
   onHome: () => void;
   onManage: () => void;
+  onBookmarks: () => void;
 }
 
 const DOMAIN_LABEL: Record<Domain, string> = {
@@ -32,6 +33,7 @@ export function Topbar({
   onSwitchDomain,
   onHome,
   onManage,
+  onBookmarks,
 }: TopbarProps) {
   const showManage = import.meta.env.DEV;
   const { user, loading, configured } = useAuth();
@@ -82,6 +84,14 @@ export function Topbar({
           solve-card
         </button>
         <nav className="nav">
+          <button
+            type="button"
+            className="btn-pill"
+            aria-pressed={current === "bookmarks"}
+            onClick={onBookmarks}
+          >
+            북마크
+          </button>
           {showManage && (
             <button
               type="button"

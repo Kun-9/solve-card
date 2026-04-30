@@ -3,9 +3,11 @@ import type {
   Difficulty,
   QuestionBank,
   Round,
+  RoundBookmarkMap,
   ScoreHistory,
   TrackMeta,
 } from "../types";
+import { RoundBookmarkBtn } from "./RoundBookmarkBtn";
 
 const ALL = "__all__" as const;
 const DIFF_LABEL: Record<Difficulty, string> = { 0: "하", 1: "중", 2: "상" };
@@ -22,6 +24,8 @@ interface DevTrackScreenProps {
     difficulty?: Difficulty,
   ) => void;
   onSelectTrack: (track: TrackMeta) => void;
+  bookmarks: RoundBookmarkMap;
+  onToggleBookmark: (roundId: string) => void;
 }
 
 export function DevTrackScreen({
@@ -31,6 +35,8 @@ export function DevTrackScreen({
   onStartRound,
   onStartRandom,
   onSelectTrack,
+  bookmarks,
+  onToggleBookmark,
 }: DevTrackScreenProps) {
   const allDevTracks = useMemo<TrackMeta[]>(
     () => (bank.tracks ?? []).filter((t) => t.domain === "dev"),
@@ -220,6 +226,8 @@ export function DevTrackScreen({
                 round={round}
                 history={history}
                 onStart={(r) => onStartRound(r, shuffled)}
+                bookmarked={Boolean(bookmarks[round.id])}
+                onToggleBookmark={() => onToggleBookmark(round.id)}
               />
             ))}
           </div>
@@ -233,9 +241,17 @@ interface ChapterCardProps {
   round: Round;
   history: ScoreHistory;
   onStart: (round: Round) => void;
+  bookmarked: boolean;
+  onToggleBookmark: () => void;
 }
 
-function ChapterCard({ round, history, onStart }: ChapterCardProps) {
+function ChapterCard({
+  round,
+  history,
+  onStart,
+  bookmarked,
+  onToggleBookmark,
+}: ChapterCardProps) {
   const log = history[round.id];
   const recent = log?.[0];
   const best = log?.reduce<number | null>((acc, r) => {
@@ -246,24 +262,29 @@ function ChapterCard({ round, history, onStart }: ChapterCardProps) {
   const disabled = count === 0;
 
   return (
-    <button
-      type="button"
-      className="card card-link"
-      onClick={() => onStart(round)}
-      disabled={disabled}
-    >
-      <div className="stack" style={{ gap: 14 }}>
-        <span className="caption">CHAPTER</span>
-        <h3 className="h-card">{round.title}</h3>
-        <div className="row row-between" style={{ marginTop: 4 }}>
-          <span className="caption">
-            {recent ? `최근 ${recent.correct}/${recent.total}` : `${count}문제`}
-          </span>
-          <span className="caption">
-            {best !== null && best !== undefined ? `최고 ${best}%` : "미응시"}
-          </span>
+    <div className="card-with-corner-action">
+      <button
+        type="button"
+        className="card card-link"
+        onClick={() => onStart(round)}
+        disabled={disabled}
+      >
+        <div className="stack" style={{ gap: 14 }}>
+          <span className="caption">CHAPTER</span>
+          <h3 className="h-card">{round.title}</h3>
+          <div className="row row-between" style={{ marginTop: 4 }}>
+            <span className="caption">
+              {recent ? `최근 ${recent.correct}/${recent.total}` : `${count}문제`}
+            </span>
+            <span className="caption">
+              {best !== null && best !== undefined ? `최고 ${best}%` : "미응시"}
+            </span>
+          </div>
         </div>
+      </button>
+      <div className="card-bookmark-corner">
+        <RoundBookmarkBtn active={bookmarked} onToggle={onToggleBookmark} />
       </div>
-    </button>
+    </div>
   );
 }

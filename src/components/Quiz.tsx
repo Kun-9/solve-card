@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { AnswerLog, Round, RoundResult } from "../types";
+import type { AnswerLog, FavoriteEntry, FavoriteMap, Round, RoundResult } from "../types";
 import { choiceLabel, resolveImageUrl } from "../lib/utils";
 import { Explanation } from "./Explanation";
+import { FavoriteStar } from "./FavoriteStar";
 import { Markdown } from "./Markdown";
 
 interface QuizProgress {
@@ -20,6 +21,8 @@ interface QuizProps {
   initialProgress?: QuizProgress;
   /** 답 선택/이동 시 호출. ordered 모드에서만 부모가 넘김. */
   onProgress?: (progress: QuizProgress) => void;
+  favorites: FavoriteMap;
+  onToggleFavorite: (entry: FavoriteEntry) => void;
 }
 
 interface AttemptState {
@@ -36,6 +39,8 @@ export function Quiz({
   onAttemptedChange,
   initialProgress,
   onProgress,
+  favorites,
+  onToggleFavorite,
 }: QuizProps) {
   const [index, setIndex] = useState(() => {
     const i = initialProgress?.currentIndex ?? 0;
@@ -183,6 +188,8 @@ export function Quiz({
         section: q.section,
         imageUrl: q.imageUrl,
         choiceImageUrls: q.choiceImageUrls,
+        sourceRoundId: q.sourceRoundId,
+        sourceTrackId: q.sourceTrackId,
       };
     });
     const correct = logs.filter((l) => l.correct).length;
@@ -227,8 +234,11 @@ export function Quiz({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, attempt.revealed, current.choices.length]);
 
+  const isPreview = round.id.startsWith("favorites-preview:");
   const rightLabel = isLast
-    ? "결과 보기"
+    ? isPreview
+      ? "닫기"
+      : "결과 보기"
     : attempt.revealed
       ? "다음 문제"
       : "건너뛰기";
@@ -266,6 +276,18 @@ export function Quiz({
             <span style={{ width: `${progress}%` }} />
           </div>
         </div>
+
+        <FavoriteStar
+          active={Boolean(favorites[current.id])}
+          onToggle={() =>
+            onToggleFavorite({
+              questionId: current.id,
+              roundId: current.sourceRoundId ?? round.id,
+              trackId: current.sourceTrackId ?? round.trackId,
+              addedAt: new Date().toISOString(),
+            })
+          }
+        />
       </header>
 
       <article className="card card-lg stack" style={{ gap: 16 }}>

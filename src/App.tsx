@@ -2,26 +2,37 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   Difficulty,
   Domain,
+  FavoriteEntry,
+  FavoriteMap,
   InProgressSession,
   QuestionBank,
   Round,
+  RoundBookmarkMap,
   RoundResult,
   TrackMeta,
 } from "./types";
 import {
+  addBookmark,
+  addFavorite,
   appendResult,
   clearInProgressSession,
   ensureAllRounds,
   ensureRound,
   loadBankAsync,
+  loadBookmarks,
+  loadFavorites,
   loadHistory,
   loadHistoryAsync,
   loadInProgressSessions,
   migrateLegacyHistoryIfNeeded,
+  removeBookmark,
+  removeFavorite,
+  removeFavoritesBulk,
   saveBank,
   saveInProgressSession,
   setAuthUserId,
 } from "./data/storage";
+import { FAVORITE_PREVIEW_PREFIX } from "./data/favorites";
 import { HomeHub } from "./components/HomeHub";
 import { CertTrackScreen } from "./components/CertTrackScreen";
 import { DevCategoryScreen } from "./components/DevCategoryScreen";
@@ -30,6 +41,7 @@ import { Quiz } from "./components/Quiz";
 import { Result } from "./components/Result";
 import { Manage } from "./components/Manage";
 import { Topbar } from "./components/Topbar";
+import { BookmarksScreen } from "./components/BookmarksScreen";
 import { useConfirm } from "./components/ConfirmDialog";
 import { shuffle } from "./lib/utils";
 import { useAuth } from "./lib/useAuth";
@@ -57,11 +69,13 @@ type Route =
       initialProgress?: QuizProgressState;
     }
   | { name: "result"; result: RoundResult; origin: EntryRoute }
-  | { name: "manage" };
+  | { name: "manage" }
+  | { name: "bookmarks" };
 
 function originOf(prev: Route): EntryRoute {
   if (prev.name === "quiz" || prev.name === "result") return prev.origin;
-  if (prev.name === "manage") return { name: "home" };
+  if (prev.name === "manage" || prev.name === "bookmarks")
+    return { name: "home" };
   return prev;
 }
 
@@ -127,6 +141,11 @@ function buildNavigation(
     case "result":
     case "manage":
       return {};
+    case "bookmarks":
+      return {
+        backLabel: "Home",
+        onBack: () => void h.goHome(),
+      };
   }
 }
 
@@ -138,6 +157,8 @@ export function App() {
   const [bank, setBank] = useState<QuestionBank>(EMPTY_BANK);
   const [history, setHistory] = useState(() => loadHistory());
   const [inProgress, setInProgress] = useState<Record<string, InProgressSession>>({});
+  const [favorites, setFavorites] = useState<FavoriteMap>({});
+  const [bookmarks, setBookmarks] = useState<RoundBookmarkMap>({});
   const [route, setRoute] = useState<Route>({ name: "home" });
   const [bootState, setBootState] = useState<"loading" | "ready" | "error">("loading");
 
@@ -151,15 +172,20 @@ export function App() {
         if (userId) {
           await migrateLegacyHistoryIfNeeded(userId);
         }
-        const [nextBank, nextHistory, nextInProgress] = await Promise.all([
-          loadBankAsync(),
-          loadHistoryAsync(),
-          loadInProgressSessions(),
-        ]);
+        const [nextBank, nextHistory, nextInProgress, nextFavorites, nextBookmarks] =
+          await Promise.all([
+            loadBankAsync(),
+            loadHistoryAsync(),
+            loadInProgressSessions(),
+            loadFavorites(),
+            loadBookmarks(),
+          ]);
         if (cancelled) return;
         setBank(nextBank);
         setHistory(nextHistory);
         setInProgress(nextInProgress);
+        setFavorites(nextFavorites);
+        setBookmarks(nextBookmarks);
         setBootState("ready");
       } catch {
         if (cancelled) return;
@@ -222,6 +248,34 @@ export function App() {
     setRoute({ name: "manage" });
   }, [requestExitQuiz]);
 
+  const goBookmarks = useCallback(async () => {
+    if (!(await requestExitQuiz())) return;
+    setRoute({ name: "bookmarks" });
+  }, [requestExitQuiz]);
+
+  const toggleFavorite = useCallback(
+    (entry: FavoriteEntry) => {
+      setFavorites((prev) => {
+        if (prev[entry.questionId]) {
+          return removeFavorite(entry.questionId);
+        }
+        return addFavorite(entry);
+      });
+    },
+    [],
+  );
+
+  const bulkRemoveFavorites = useCallback((questionIds: string[]) => {
+    if (questionIds.length === 0) return;
+    setFavorites(removeFavoritesBulk(questionIds));
+  }, []);
+
+  const toggleBookmark = useCallback((roundId: string) => {
+    setBookmarks((prev) =>
+      prev[roundId] ? removeBookmark(roundId) : addBookmark(roundId),
+    );
+  }, []);
+
   const goTrack = useCallback(
     async (track: TrackMeta) => {
       if (!(await requestExitQuiz())) return;
@@ -241,6 +295,18 @@ export function App() {
     },
     [requestExitQuiz],
   );
+
+  /** 메모리 안에서 만든 가상 Round(즐겨찾기 모아풀기 등)를 풀이로 시작. */
+  const startVirtualRound = useCallback((round: Round, label: string) => {
+    setRoute((prev) => ({
+      name: "quiz",
+      round,
+      mode: "random",
+      sourceLabel: label,
+      origin: originOf(prev),
+      startedAt: new Date().toISOString(),
+    }));
+  }, []);
 
   const startRound = useCallback(async (meta: Round, shuffled = false) => {
     const full = await ensureRound(meta.id);
@@ -304,7 +370,14 @@ export function App() {
       const scopedRounds = trackId
         ? full.rounds.filter((r) => r.trackId === trackId)
         : full.rounds;
-      let pool = scopedRounds.flatMap((r) => r.questions);
+      // 합성 round의 questions는 원본 회차 추적이 필요 — 즐겨찾기 추가 시 본문 lookup에 사용.
+      let pool = scopedRounds.flatMap((r) =>
+        r.questions.map((q) => ({
+          ...q,
+          sourceRoundId: q.sourceRoundId ?? r.id,
+          sourceTrackId: q.sourceTrackId ?? r.trackId,
+        })),
+      );
       if (subjectKey) {
         pool = pool.filter((q) => q.section?.startsWith(subjectKey));
       }
@@ -372,6 +445,11 @@ export function App() {
   );
 
   const finishQuiz = useCallback((result: RoundResult) => {
+    // 미리보기는 결과 화면을 띄우지 않고 곧장 북마크로 복귀
+    if (result.roundId.startsWith(FAVORITE_PREVIEW_PREFIX)) {
+      setRoute({ name: "bookmarks" });
+      return;
+    }
     const next = appendResult(result);
     setHistory(next);
     clearInProgressSession(result.roundId);
@@ -415,9 +493,13 @@ export function App() {
   if (bootState === "loading") {
     return (
       <div className="app-shell">
-        <Topbar current="home" onHome={goHome} onManage={goManage} />
+        <Topbar
+          current="home"
+          onHome={goHome}
+          onManage={goManage}
+          onBookmarks={goBookmarks}
+        />
         <main>
-
           <div className="container">
             <div className="card empty">문제 데이터를 불러오는 중…</div>
           </div>
@@ -426,18 +508,26 @@ export function App() {
     );
   }
 
+  const topbarCurrent: "home" | "manage" | "bookmarks" =
+    route.name === "manage"
+      ? "manage"
+      : route.name === "bookmarks"
+        ? "bookmarks"
+        : "home";
+
   const nav = buildNavigation(route, bank, { goHome, goCategory });
 
   return (
     <div className="app-shell">
       <Topbar
-        current={route.name === "manage" ? "manage" : "home"}
+        current={topbarCurrent}
         backLabel={nav.backLabel}
         onBack={nav.onBack}
         activeDomain={nav.activeDomain}
         onSwitchDomain={nav.onSwitchDomain}
         onHome={goHome}
         onManage={goManage}
+        onBookmarks={goBookmarks}
       />
       <main>
         <div className="container">
@@ -464,6 +554,8 @@ export function App() {
               onStartRandom={startRandom}
               onSelectTrack={goTrack}
               onManage={goManage}
+              bookmarks={bookmarks}
+              onToggleBookmark={toggleBookmark}
             />
           )}
           {route.name === "dev-category" && (
@@ -483,6 +575,8 @@ export function App() {
               onStartRound={(round, shuffled) => startRound(round, shuffled)}
               onStartRandom={startRandom}
               onSelectTrack={goTrack}
+              bookmarks={bookmarks}
+              onToggleBookmark={toggleBookmark}
             />
           )}
           {route.name === "quiz" && (
@@ -497,10 +591,22 @@ export function App() {
               onProgress={
                 route.mode === "ordered" ? handleQuizProgress : undefined
               }
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
             />
           )}
           {route.name === "result" && (
-            <Result result={route.result} onRetry={retry} onHome={goHome} />
+            <Result
+              result={route.result}
+              onRetry={retry}
+              onHome={goHome}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+              onBulkRemoveFavorites={bulkRemoveFavorites}
+              roundTrackId={
+                bank.rounds.find((r) => r.id === route.result.roundId)?.trackId
+              }
+            />
           )}
           {route.name === "manage" && (
             <Manage
@@ -508,6 +614,17 @@ export function App() {
               onChange={updateBank}
               onReplace={replaceBank}
               onClose={goHome}
+            />
+          )}
+          {route.name === "bookmarks" && (
+            <BookmarksScreen
+              bank={bank}
+              favorites={favorites}
+              bookmarks={bookmarks}
+              onToggleFavorite={toggleFavorite}
+              onToggleBookmark={toggleBookmark}
+              onStartRound={(round, shuffled) => startRound(round, shuffled)}
+              onStartVirtualRound={startVirtualRound}
             />
           )}
         </div>

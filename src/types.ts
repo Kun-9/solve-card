@@ -56,6 +56,10 @@ export interface Question {
   choiceImageUrls?: (string | null | undefined)[];
   /** 문제 난이도(0/1/2). Dev 트랙에서만 채워지고 Cert 는 비움. */
   difficulty?: Difficulty;
+  /** 런타임 한정. 랜덤·즐겨찾기 풀 등 합성 회차에서 원본 회차를 추적하기 위함. JSON에는 없음. */
+  sourceRoundId?: string;
+  /** 런타임 한정. 위와 짝. 즐겨찾기 트랙 그룹핑에 사용. */
+  sourceTrackId?: string;
 }
 
 export interface Round {
@@ -99,6 +103,9 @@ export interface AnswerLog {
   section?: string;
   imageUrl?: string;
   choiceImageUrls?: (string | null | undefined)[];
+  /** 즐겨찾기 추가 시 원본 회차를 추적. 합성 회차일 때만 의미 있음. */
+  sourceRoundId?: string;
+  sourceTrackId?: string;
 }
 
 export interface RoundResult {
@@ -129,3 +136,23 @@ export interface InProgressSession {
   currentIndex: number;
   selections: Record<string, number>;
 }
+
+/**
+ * 헷갈리는 문제 즐겨찾기 1건.
+ * 본문(prompt/choices)은 들고 있지 않다 — roundId로 ensureRound 후 questionId로 lookup.
+ */
+export interface FavoriteEntry {
+  questionId: string;
+  roundId: string;
+  trackId?: string;
+  addedAt: string;
+}
+
+export type FavoriteMap = Record<string, FavoriteEntry>;
+
+export interface RoundBookmark {
+  roundId: string;
+  addedAt: string;
+}
+
+export type RoundBookmarkMap = Record<string, RoundBookmark>;

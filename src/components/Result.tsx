@@ -1,17 +1,56 @@
-import type { RoundResult } from "../types";
+import { useMemo } from "react";
+import type { FavoriteEntry, FavoriteMap, RoundResult } from "../types";
 import { formatDuration, choiceLabel, resolveImageUrl } from "../lib/utils";
 import { Explanation } from "./Explanation";
+import { FavoriteStar } from "./FavoriteStar";
 import { Markdown } from "./Markdown";
 
 interface ResultProps {
   result: RoundResult;
   onRetry: () => void;
   onHome: () => void;
+  favorites: FavoriteMap;
+  onToggleFavorite: (entry: FavoriteEntry) => void;
+  onBulkRemoveFavorites: (questionIds: string[]) => void;
+  /** 결과 회차의 trackId. 즐겨찾기 추가 시 동일 트랙으로 묶이도록 함. */
+  roundTrackId?: string;
 }
 
-export function Result({ result, onRetry, onHome }: ResultProps) {
+export function Result({
+  result,
+  onRetry,
+  onHome,
+  favorites,
+  onToggleFavorite,
+  onBulkRemoveFavorites,
+  roundTrackId,
+}: ResultProps) {
   const rate = result.total === 0 ? 0 : Math.round((result.correct / result.total) * 100);
   const wrong = result.logs.filter((l) => !l.correct);
+
+  const correctlyFavored = useMemo(
+    () =>
+      result.logs
+        .filter((l) => l.correct && favorites[l.questionId])
+        .map((l) => l.questionId),
+    [result.logs, favorites],
+  );
+
+  const logsById = useMemo(() => {
+    const map = new Map<string, (typeof result.logs)[number]>();
+    for (const l of result.logs) map.set(l.questionId, l);
+    return map;
+  }, [result.logs]);
+
+  const makeEntry = (questionId: string): FavoriteEntry => {
+    const log = logsById.get(questionId);
+    return {
+      questionId,
+      roundId: log?.sourceRoundId ?? result.roundId,
+      trackId: log?.sourceTrackId ?? roundTrackId,
+      addedAt: new Date().toISOString(),
+    };
+  };
 
   return (
     <div className="stack-xl stack">
@@ -41,6 +80,31 @@ export function Result({ result, onRetry, onHome }: ResultProps) {
         </div>
       </section>
 
+      {correctlyFavored.length > 0 && (
+        <div className="tidy-banner" role="status">
+          <svg
+            className="tidy-banner-icon"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden
+          >
+            <path d="M12 3.5l2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 17l-5.3 2.8 1.1-5.9L3.4 9.8l6-.8z" />
+          </svg>
+          <span className="tidy-banner-text">
+            이번에 맞힌 즐겨찾기 <strong>{correctlyFavored.length}개</strong>
+          </span>
+          <button
+            type="button"
+            className="tidy-banner-btn"
+            onClick={() => onBulkRemoveFavorites(correctlyFavored)}
+          >
+            별 빼기
+          </button>
+        </div>
+      )}
+
       <section className="stack">
         <div className="row row-between">
           <h2 className="h-section">오답 노트</h2>
@@ -54,7 +118,18 @@ export function Result({ result, onRetry, onHome }: ResultProps) {
           <div className="stack" style={{ gap: 12 }}>
             {wrong.map((log) => (
               <article key={log.questionId} className="card stack" style={{ gap: 10 }}>
-                {log.section && <span className="caption">{log.section}</span>}
+                <div className="row row-between" style={{ alignItems: "center" }}>
+                  {log.section ? (
+                    <span className="caption">{log.section}</span>
+                  ) : (
+                    <span />
+                  )}
+                  <FavoriteStar
+                    active={Boolean(favorites[log.questionId])}
+                    size={18}
+                    onToggle={() => onToggleFavorite(makeEntry(log.questionId))}
+                  />
+                </div>
                 <div
                   className="body prompt-md"
                   style={{ color: "var(--charcoal)", fontWeight: 600 }}

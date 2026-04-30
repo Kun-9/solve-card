@@ -1,5 +1,12 @@
 import { useMemo, useState } from "react";
-import type { QuestionBank, Round, ScoreHistory, TrackMeta } from "../types";
+import type {
+  QuestionBank,
+  Round,
+  RoundBookmarkMap,
+  ScoreHistory,
+  TrackMeta,
+} from "../types";
+import { RoundBookmarkBtn } from "./RoundBookmarkBtn";
 
 interface CertTrackScreenProps {
   bank: QuestionBank;
@@ -10,6 +17,8 @@ interface CertTrackScreenProps {
   onStartRandom: (subjectKey: string | undefined, trackId: string) => void;
   onSelectTrack: (track: TrackMeta) => void;
   onManage: () => void;
+  bookmarks: RoundBookmarkMap;
+  onToggleBookmark: (roundId: string) => void;
 }
 
 const ALL = "__all__" as const;
@@ -36,6 +45,8 @@ export function CertTrackScreen({
   onStartRandom,
   onSelectTrack,
   onManage,
+  bookmarks,
+  onToggleBookmark,
 }: CertTrackScreenProps) {
   const tracksInDomain = useMemo<TrackMeta[]>(() => {
     if (bank.tracks && bank.tracks.length > 0) {
@@ -279,6 +290,8 @@ export function CertTrackScreen({
                 history={history}
                 dateLabel={dateMap.get(round.id) ?? null}
                 onStart={(r) => onStartRound(r, shuffled)}
+                bookmarked={Boolean(bookmarks[round.id])}
+                onToggleBookmark={() => onToggleBookmark(round.id)}
               />
             ))}
           </div>
@@ -293,9 +306,18 @@ interface RoundCardProps {
   history: ScoreHistory;
   dateLabel: string | null;
   onStart: (round: Round) => void;
+  bookmarked: boolean;
+  onToggleBookmark: () => void;
 }
 
-function RoundCard({ round, history, dateLabel, onStart }: RoundCardProps) {
+function RoundCard({
+  round,
+  history,
+  dateLabel,
+  onStart,
+  bookmarked,
+  onToggleBookmark,
+}: RoundCardProps) {
   const log = history[round.id];
   const recent = log?.[0];
   const best = log?.reduce<number | null>((acc, r) => {
@@ -306,26 +328,31 @@ function RoundCard({ round, history, dateLabel, onStart }: RoundCardProps) {
   const disabled = count === 0;
 
   return (
-    <button
-      type="button"
-      className="card card-link"
-      onClick={() => onStart(round)}
-      disabled={disabled}
-    >
-      <div className="stack" style={{ gap: 14 }}>
-        <div className="row row-between" style={{ alignItems: "center" }}>
-          <span className="caption">{dateLabel ?? round.id}</span>
+    <div className="card-with-corner-action">
+      <button
+        type="button"
+        className="card card-link"
+        onClick={() => onStart(round)}
+        disabled={disabled}
+      >
+        <div className="stack" style={{ gap: 14 }}>
+          <div className="row row-between" style={{ alignItems: "center" }}>
+            <span className="caption">{dateLabel ?? round.id}</span>
+          </div>
+          <h3 className="h-card">{round.title}</h3>
+          <div className="row row-between" style={{ marginTop: 4 }}>
+            <span className="caption">
+              {recent ? `최근 ${recent.correct}/${recent.total}` : `${count}문제`}
+            </span>
+            <span className="caption">
+              {best !== null && best !== undefined ? `최고 ${best}%` : "미응시"}
+            </span>
+          </div>
         </div>
-        <h3 className="h-card">{round.title}</h3>
-        <div className="row row-between" style={{ marginTop: 4 }}>
-          <span className="caption">
-            {recent ? `최근 ${recent.correct}/${recent.total}` : `${count}문제`}
-          </span>
-          <span className="caption">
-            {best !== null && best !== undefined ? `최고 ${best}%` : "미응시"}
-          </span>
-        </div>
+      </button>
+      <div className="card-bookmark-corner">
+        <RoundBookmarkBtn active={bookmarked} onToggle={onToggleBookmark} />
       </div>
-    </button>
+    </div>
   );
 }

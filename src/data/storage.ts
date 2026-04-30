@@ -1,8 +1,12 @@
 import type {
   CategoryMeta,
+  FavoriteEntry,
+  FavoriteMap,
   InProgressSession,
   QuestionBank,
   Round,
+  RoundBookmark,
+  RoundBookmarkMap,
   RoundResult,
   ScoreHistory,
   SubjectMeta,
@@ -11,22 +15,41 @@ import type {
 import { SEED_BANK } from "./seed";
 import {
   bulkInsertAttempts,
+  deleteUserBookmark,
+  deleteUserFavorite,
+  deleteUserFavorites,
   deleteUserInProgress,
   fetchAttempts,
   fetchLegacyHistoryImported,
+  fetchUserBookmarks,
+  fetchUserFavorites,
   fetchUserInProgress,
   fetchUserManifestOverlay,
   fetchUserRoundOverlays,
   insertAttempt,
   setLegacyHistoryImported,
+  upsertUserBookmark,
+  upsertUserFavorite,
   upsertUserInProgress,
   upsertUserManifestOverlay,
   upsertUserRoundOverlay,
   type UserManifestPatch,
 } from "./cloud";
 
+export const FAVORITE_POOL_PREFIX = "favorites:";
+const FAVORITE_PREVIEW_PREFIX = "favorites-preview:";
+
+function isVirtualFavoriteRoundId(id: string): boolean {
+  return (
+    id.startsWith(FAVORITE_POOL_PREFIX) ||
+    id.startsWith(FAVORITE_PREVIEW_PREFIX)
+  );
+}
+
 const HISTORY_KEY = "solve-card:history:v1";
 const IN_PROGRESS_KEY = "solve-card:in-progress:v1";
+const FAVORITES_KEY = "solve-card:favorites:v1";
+const BOOKMARKS_KEY = "solve-card:bookmarks:v1";
 const MANIFEST_KEY = "solve-card:manifest:v3";
 const ROUND_KEY_PREFIX = "solve-card:round:v3:";
 const USER_VERSION = "user-modified";
@@ -478,6 +501,10 @@ export async function migrateLegacyHistoryIfNeeded(
 }
 
 export function appendResult(result: RoundResult): ScoreHistory {
+  // 즐겨찾기 모아풀기/미리보기는 일회성 — 히스토리에 남기지 않는다.
+  if (isVirtualFavoriteRoundId(result.roundId)) {
+    return loadHistory();
+  }
   const history = loadHistory();
   const list = history[result.roundId] ?? [];
   const next: ScoreHistory = {
@@ -522,6 +549,8 @@ export async function loadInProgressSessions(): Promise<InProgressMap> {
 
 export function saveInProgressSession(session: InProgressSession): void {
   if (!isBrowser) return;
+  // 즐겨찾기 모아풀기/미리보기 가상 round는 이어풀기 대상에서 제외
+  if (isVirtualFavoriteRoundId(session.roundId)) return;
   const map = readInProgressLocal();
   map[session.roundId] = session;
   writeInProgressLocal(map);
@@ -532,6 +561,7 @@ export function saveInProgressSession(session: InProgressSession): void {
 
 export function clearInProgressSession(roundId: string): void {
   if (!isBrowser) return;
+  if (isVirtualFavoriteRoundId(roundId)) return;
   const map = readInProgressLocal();
   if (roundId in map) {
     delete map[roundId];
@@ -540,6 +570,106 @@ export function clearInProgressSession(roundId: string): void {
   if (currentUserId) {
     void deleteUserInProgress(currentUserId, roundId);
   }
+}
+
+/* ──────────────── favorites & bookmarks ──────────────── */
+
+function readFavoritesLocal(): FavoriteMap {
+  if (!isBrowser) return {};
+  return safeParse<FavoriteMap>(localStorage.getItem(FAVORITES_KEY)) ?? {};
+}
+
+function writeFavoritesLocal(map: FavoriteMap): void {
+  if (!isBrowser) return;
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(map));
+}
+
+function readBookmarksLocal(): RoundBookmarkMap {
+  if (!isBrowser) return {};
+  return safeParse<RoundBookmarkMap>(localStorage.getItem(BOOKMARKS_KEY)) ?? {};
+}
+
+function writeBookmarksLocal(map: RoundBookmarkMap): void {
+  if (!isBrowser) return;
+  localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(map));
+}
+
+export async function loadFavorites(): Promise<FavoriteMap> {
+  if (!isBrowser) return {};
+  if (!currentUserId) return readFavoritesLocal();
+  const cloud = await fetchUserFavorites(currentUserId);
+  writeFavoritesLocal(cloud);
+  return cloud;
+}
+
+export async function loadBookmarks(): Promise<RoundBookmarkMap> {
+  if (!isBrowser) return {};
+  if (!currentUserId) return readBookmarksLocal();
+  const cloud = await fetchUserBookmarks(currentUserId);
+  writeBookmarksLocal(cloud);
+  return cloud;
+}
+
+export function addFavorite(entry: FavoriteEntry): FavoriteMap {
+  const map = readFavoritesLocal();
+  map[entry.questionId] = entry;
+  writeFavoritesLocal(map);
+  if (currentUserId) {
+    void upsertUserFavorite(currentUserId, entry);
+  }
+  return map;
+}
+
+export function removeFavorite(questionId: string): FavoriteMap {
+  const map = readFavoritesLocal();
+  if (questionId in map) {
+    delete map[questionId];
+    writeFavoritesLocal(map);
+  }
+  if (currentUserId) {
+    void deleteUserFavorite(currentUserId, questionId);
+  }
+  return map;
+}
+
+export function removeFavoritesBulk(questionIds: string[]): FavoriteMap {
+  if (questionIds.length === 0) return readFavoritesLocal();
+  const map = readFavoritesLocal();
+  let mutated = false;
+  for (const id of questionIds) {
+    if (id in map) {
+      delete map[id];
+      mutated = true;
+    }
+  }
+  if (mutated) writeFavoritesLocal(map);
+  if (currentUserId) {
+    void deleteUserFavorites(currentUserId, questionIds);
+  }
+  return map;
+}
+
+export function addBookmark(roundId: string): RoundBookmarkMap {
+  const map = readBookmarksLocal();
+  const entry: RoundBookmark = { roundId, addedAt: new Date().toISOString() };
+  map[roundId] = entry;
+  writeBookmarksLocal(map);
+  if (currentUserId) {
+    void upsertUserBookmark(currentUserId, entry);
+  }
+  return map;
+}
+
+export function removeBookmark(roundId: string): RoundBookmarkMap {
+  const map = readBookmarksLocal();
+  if (roundId in map) {
+    delete map[roundId];
+    writeBookmarksLocal(map);
+  }
+  if (currentUserId) {
+    void deleteUserBookmark(currentUserId, roundId);
+  }
+  return map;
 }
 
 export function exportBankToFile(bank: QuestionBank, filename = "questions.json"): void {

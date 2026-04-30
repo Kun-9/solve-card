@@ -1671,3 +1671,233 @@ main {
     to   { transform: translateY(0); }
   }
 }
+
+/* ─────────────────────────────────────────────
+   Favorites · Bookmarks
+   ───────────────────────────────────────────── */
+
+.favorite-star,
+.round-bookmark-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: var(--r-pill);
+  color: var(--charcoal-40);
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease, transform 80ms ease;
+}
+
+.favorite-star:hover,
+.round-bookmark-btn:hover {
+  background: var(--charcoal-04);
+  color: var(--charcoal);
+}
+
+.favorite-star:active,
+.round-bookmark-btn:active {
+  transform: scale(0.94);
+}
+
+.favorite-star[data-active="true"] {
+  color: #d97706; /* amber-600 — 헷갈린 문제 톤 */
+}
+
+.round-bookmark-btn[data-active="true"] {
+  color: #2563eb; /* blue-600 — 나중에 풀 회차 톤 */
+}
+
+/* 회차 카드 안에 절대 배치되는 북마크 버튼 */
+.card-bookmark-corner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+}
+
+/* 카드/Quiz/Result 헤더 안에 들어가는 작은 별 */
+.quiz-header .favorite-star {
+  flex-shrink: 0;
+}
+
+/* Bookmarks 화면 */
+.bookmarks-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.bookmarks-tabs {
+  display: inline-flex;
+  background: var(--charcoal-04);
+  border-radius: var(--r-pill);
+  padding: 4px;
+  align-self: flex-start;
+}
+
+.bookmarks-tab {
+  border: none;
+  background: transparent;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+
+.bookmarks-tab[aria-pressed="true"] {
+  background: var(--cream-soft);
+  color: var(--charcoal);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.bookmarks-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* Drilldown 필터 행 */
+.drill-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.drill-chip {
+  border: 1px solid var(--hairline-strong);
+  background: var(--cream-soft);
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  font-size: 13px;
+  color: var(--charcoal-83);
+  cursor: pointer;
+}
+
+.drill-chip[aria-pressed="true"] {
+  background: var(--charcoal);
+  color: var(--cream-soft);
+  border-color: var(--charcoal);
+}
+
+/* 풀이 시작 카드 */
+.drill-runner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+}
+
+.drill-runner .drill-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+
+.drill-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drill-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.drill-preview-prompt-btn {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--r-std);
+}
+
+.drill-preview-prompt-btn:hover {
+  background: var(--charcoal-04);
+}
+
+.drill-preview-prompt {
+  display: block;
+  font-size: 14px;
+  color: var(--charcoal-83);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drill-preview-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* 결과 화면: 맞힌 즐겨찾기 정리 배너 */
+.tidy-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(217, 119, 6, 0.07);
+  border: 1px solid rgba(217, 119, 6, 0.2);
+  border-radius: var(--r-card);
+  color: var(--charcoal-83);
+}
+
+.tidy-banner-icon {
+  flex-shrink: 0;
+  color: #d97706;
+}
+
+.tidy-banner-text {
+  flex: 1;
+  font-size: 14px;
+}
+
+.tidy-banner-text strong {
+  font-weight: 700;
+  color: #b45309;
+}
+
+.tidy-banner-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  color: #b45309;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.tidy-banner-btn:hover {
+  background: rgba(217, 119, 6, 0.1);
+  border-color: rgba(217, 119, 6, 0.5);
+}
+
+.tidy-banner-btn:active {
+  transform: translateY(1px);
+}
+
+/* 회차 카드 + 코너 북마크 버튼 래퍼 */
+.card-with-corner-action {
+  position: relative;
+}
+
+.card-with-corner-action > .card {
+  width: 100%;
+  height: 100%;
+}
+

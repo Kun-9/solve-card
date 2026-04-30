@@ -206,21 +206,33 @@ export function Quiz({
     onFinish(result);
   }
 
-  // 키보드 단축키: ← / → 이동, 1-N으로 보기 선택
+  // 키보드 단축키: ←/a 이전, →/d 다음, 1-N 보기 선택, s 별 토글.
+  // 알파벳은 `e.code`로 비교해 한/영 IME 상태와 무관하게 동작.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
-      if (e.key === "ArrowLeft") {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "ArrowLeft" || e.code === "KeyA") {
         e.preventDefault();
         prev();
         return;
       }
-      if (e.key === "ArrowRight") {
+      if (e.key === "ArrowRight" || e.code === "KeyD") {
         e.preventDefault();
         if (attempt.revealed) next();
         else skip();
+        return;
+      }
+      if (e.code === "KeyS") {
+        e.preventDefault();
+        onToggleFavorite({
+          questionId: current.id,
+          roundId: current.sourceRoundId ?? round.id,
+          trackId: current.sourceTrackId ?? round.trackId,
+          addedAt: new Date().toISOString(),
+        });
         return;
       }
       const num = Number(e.key);
@@ -232,7 +244,26 @@ export function Quiz({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, attempt.revealed, current.choices.length]);
+  }, [index, attempt.revealed, current.choices.length, current.id]);
+
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!helpOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (!helpRef.current?.contains(e.target as Node)) setHelpOpen(false);
+    }
+    function onDocKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setHelpOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onDocKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onDocKey);
+    };
+  }, [helpOpen]);
 
   const isPreview = round.id.startsWith("favorites-preview:");
   const rightLabel = isLast
@@ -289,6 +320,60 @@ export function Quiz({
           }
         />
       </header>
+
+      <div className="quiz-help-bar" ref={helpRef}>
+        <button
+          type="button"
+          className="quiz-help-trigger"
+          onClick={() => setHelpOpen((v) => !v)}
+          aria-label="키보드 단축키 안내"
+          aria-expanded={helpOpen}
+          aria-haspopup="dialog"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M12 11v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            <circle cx="12" cy="8" r="1" fill="currentColor" />
+          </svg>
+          <span>키보드 단축키</span>
+        </button>
+        {helpOpen && (
+          <div className="quiz-help-panel" role="dialog" aria-label="단축키 안내">
+            <h3 className="quiz-help-title">단축키</h3>
+            <dl className="quiz-help-list">
+              <div>
+                <dt>
+                  <kbd>1</kbd>–<kbd>{current.choices.length}</kbd>
+                </dt>
+                <dd>보기 선택</dd>
+              </div>
+              <div>
+                <dt>
+                  <kbd>←</kbd>
+                  <span className="quiz-help-or">또는</span>
+                  <kbd>A</kbd>
+                </dt>
+                <dd>이전 문제</dd>
+              </div>
+              <div>
+                <dt>
+                  <kbd>→</kbd>
+                  <span className="quiz-help-or">또는</span>
+                  <kbd>D</kbd>
+                </dt>
+                <dd>다음 / 건너뛰기</dd>
+              </div>
+              <div>
+                <dt>
+                  <kbd>S</kbd>
+                </dt>
+                <dd>별 토글</dd>
+              </div>
+            </dl>
+            <p className="quiz-help-note">한/영 무관하게 동작합니다.</p>
+          </div>
+        )}
+      </div>
 
       <article className="card card-lg stack" style={{ gap: 16 }}>
         {current.section && <span className="caption">{current.section}</span>}

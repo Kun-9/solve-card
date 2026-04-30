@@ -832,6 +832,108 @@ main {
   color: var(--charcoal);
 }
 
+.quiz-help-bar {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+}
+@media (max-width: 720px) {
+  .quiz-help-bar {
+    display: none;
+  }
+}
+
+.quiz-help-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 0;
+  color: var(--charcoal-82);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  opacity: 0.7;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+.quiz-help-trigger:hover {
+  background: var(--cream-soft);
+  color: var(--charcoal);
+  opacity: 1;
+}
+.quiz-help-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  min-width: 240px;
+  padding: 12px 14px 10px;
+  background: var(--cream);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+  color: var(--charcoal);
+}
+.quiz-help-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--charcoal-82);
+}
+.quiz-help-list {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.quiz-help-list > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.quiz-help-list dt {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.quiz-help-list dd {
+  margin: 0;
+  color: var(--charcoal-82);
+}
+.quiz-help-list kbd {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  background: var(--cream-soft);
+  color: var(--charcoal);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  min-width: 18px;
+  text-align: center;
+}
+.quiz-help-or {
+  font-size: 11px;
+  color: var(--charcoal-82);
+  opacity: 0.7;
+}
+.quiz-help-note {
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: var(--charcoal-82);
+  opacity: 0.75;
+}
+
 /* ─────────────────────────────────────────────
    Quiz fixed action bar (mobile-friendly)
    ───────────────────────────────────────────── */

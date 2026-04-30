@@ -147,6 +147,8 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .brand-dot {
@@ -154,12 +156,15 @@ a {
   height: 8px;
   border-radius: var(--r-pill);
   background: var(--charcoal);
+  flex: none;
 }
 
 .nav {
   display: flex;
   gap: 4px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .user-chip {

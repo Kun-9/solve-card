@@ -108,7 +108,7 @@ export function Topbar({
               className="btn-pill"
               onClick={() => void signInWithGoogle()}
             >
-              Google 로그인
+              로그인
             </button>
           )}
           {configured && user && (

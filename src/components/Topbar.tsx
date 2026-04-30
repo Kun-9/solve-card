@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { Domain } from "../types";
 import {
   avatarUrlFrom,
   displayNameFrom,
@@ -10,11 +11,28 @@ import { useConfirm } from "./ConfirmDialog";
 
 interface TopbarProps {
   current: "home" | "manage";
+  backLabel?: string;
+  onBack?: () => void;
+  activeDomain?: Domain;
+  onSwitchDomain?: (domain: Domain) => void;
   onHome: () => void;
   onManage: () => void;
 }
 
-export function Topbar({ current, onHome, onManage }: TopbarProps) {
+const DOMAIN_LABEL: Record<Domain, string> = {
+  cert: "Cert",
+  dev: "Dev",
+};
+
+export function Topbar({
+  current,
+  backLabel,
+  onBack,
+  activeDomain,
+  onSwitchDomain,
+  onHome,
+  onManage,
+}: TopbarProps) {
   const showManage = import.meta.env.DEV;
   const { user, loading, configured } = useAuth();
   const confirm = useConfirm();
@@ -28,6 +46,33 @@ export function Topbar({ current, onHome, onManage }: TopbarProps) {
     if (!ok) return;
     await signOut();
   };
+
+  const domainPill =
+    activeDomain && onSwitchDomain ? (
+      <div
+        className="topbar-domain"
+        role="radiogroup"
+        aria-label="분야 선택"
+      >
+        {(["cert", "dev"] as Domain[]).map((d) => (
+          <button
+            key={d}
+            type="button"
+            className="btn-pill"
+            role="radio"
+            aria-checked={activeDomain === d}
+            aria-pressed={activeDomain === d}
+            onClick={() => {
+              if (activeDomain !== d) onSwitchDomain(d);
+            }}
+          >
+            {DOMAIN_LABEL[d]}
+          </button>
+        ))}
+      </div>
+    ) : null;
+
+  const showSubrow = Boolean(onBack) || Boolean(domainPill);
 
   return (
     <header className="appbar">
@@ -69,6 +114,36 @@ export function Topbar({ current, onHome, onManage }: TopbarProps) {
           )}
         </nav>
       </div>
+      {showSubrow && (
+        <div className="container appbar-subrow">
+          {onBack && (
+            <button
+              type="button"
+              className="back-btn"
+              onClick={onBack}
+              aria-label={backLabel ? `${backLabel}(으)로 돌아가기` : "뒤로 가기"}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M15 6l-6 6 6 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="back-btn-label">{backLabel ?? "뒤로"}</span>
+            </button>
+          )}
+          {domainPill}
+        </div>
+      )}
     </header>
   );
 }

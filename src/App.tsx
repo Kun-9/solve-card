@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   Difficulty,
+  Domain,
   InProgressSession,
   QuestionBank,
   Round,
@@ -34,7 +35,7 @@ import { shuffle } from "./lib/utils";
 import { useAuth } from "./lib/useAuth";
 
 type EntryRoute =
-  | { name: "home" }
+  | { name: "home"; domain?: Domain }
   | { name: "cert"; trackId: string }
   | { name: "dev-category"; categoryId: string }
   | { name: "dev-track"; trackId: string };
@@ -66,6 +67,68 @@ function originOf(prev: Route): EntryRoute {
 
 const RANDOM_POOL_SIZE = 20;
 const EMPTY_BANK: QuestionBank = { rounds: [], updatedAt: "" };
+
+interface NavHandlers {
+  goHome: (domain?: Domain) => Promise<void> | void;
+  goCategory: (categoryId: string) => Promise<void> | void;
+}
+
+interface NavInfo {
+  backLabel?: string;
+  onBack?: () => void;
+  activeDomain?: Domain;
+  onSwitchDomain?: (domain: Domain) => void;
+}
+
+function buildNavigation(
+  route: Route,
+  bank: QuestionBank,
+  h: NavHandlers,
+): NavInfo {
+  const tracks = bank.tracks ?? [];
+  const categories = bank.categories ?? [];
+  const trackCategoryId = (id: string) =>
+    tracks.find((t) => t.id === id)?.categoryId;
+  const categoryTitle = (id: string) =>
+    categories.find((c) => c.id === id)?.title ?? id;
+
+  const switchDomain = (d: Domain) => void h.goHome(d);
+
+  switch (route.name) {
+    case "home":
+      return {};
+    case "cert":
+      return {
+        backLabel: "Home",
+        onBack: () => void h.goHome("cert"),
+        activeDomain: "cert",
+        onSwitchDomain: switchDomain,
+      };
+    case "dev-category":
+      return {
+        backLabel: "Home",
+        onBack: () => void h.goHome("dev"),
+        activeDomain: "dev",
+        onSwitchDomain: switchDomain,
+      };
+    case "dev-track": {
+      const categoryId = trackCategoryId(route.trackId);
+      const parent = categoryId ? categoryTitle(categoryId) : "Dev";
+      return {
+        backLabel: parent,
+        onBack: categoryId
+          ? () => void h.goCategory(categoryId)
+          : () => void h.goHome("dev"),
+        activeDomain: "dev",
+        onSwitchDomain: switchDomain,
+      };
+    }
+    case "quiz":
+    case "result":
+    case "manage":
+      return {};
+  }
+}
 
 export function App() {
   const { user, loading: authLoading } = useAuth();
@@ -146,10 +209,13 @@ export function App() {
     return ok;
   }, [route, confirm]);
 
-  const goHome = useCallback(async () => {
-    if (!(await requestExitQuiz())) return;
-    setRoute({ name: "home" });
-  }, [requestExitQuiz]);
+  const goHome = useCallback(
+    async (domain?: Domain) => {
+      if (!(await requestExitQuiz())) return;
+      setRoute(domain ? { name: "home", domain } : { name: "home" });
+    },
+    [requestExitQuiz],
+  );
   const goManage = useCallback(async () => {
     if (!import.meta.env.DEV) return;
     if (!(await requestExitQuiz())) return;
@@ -351,6 +417,7 @@ export function App() {
       <div className="app-shell">
         <Topbar current="home" onHome={goHome} onManage={goManage} />
         <main>
+
           <div className="container">
             <div className="card empty">문제 데이터를 불러오는 중…</div>
           </div>
@@ -359,10 +426,16 @@ export function App() {
     );
   }
 
+  const nav = buildNavigation(route, bank, { goHome, goCategory });
+
   return (
     <div className="app-shell">
       <Topbar
         current={route.name === "manage" ? "manage" : "home"}
+        backLabel={nav.backLabel}
+        onBack={nav.onBack}
+        activeDomain={nav.activeDomain}
+        onSwitchDomain={nav.onSwitchDomain}
         onHome={goHome}
         onManage={goManage}
       />
@@ -377,6 +450,7 @@ export function App() {
               inProgress={Object.values(inProgress)}
               onResume={resumeRound}
               onDiscardInProgress={discardInProgress}
+              initialDomain={route.domain}
             />
           )}
           {route.name === "cert" && (

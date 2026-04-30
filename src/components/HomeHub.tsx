@@ -16,6 +16,7 @@ interface HomeHubProps {
   inProgress?: InProgressSession[];
   onResume?: (roundId: string) => void;
   onDiscardInProgress?: (roundId: string) => void;
+  initialDomain?: Domain;
 }
 
 const FALLBACK_CERT_TRACK: TrackMeta = {
@@ -37,6 +38,7 @@ export function HomeHub({
   inProgress = [],
   onResume,
   onDiscardInProgress,
+  initialDomain,
 }: HomeHubProps) {
   const confirm = useConfirm();
   const handleDiscard = onDiscardInProgress
@@ -50,7 +52,12 @@ export function HomeHub({
         if (ok) onDiscardInProgress(roundId);
       }
     : undefined;
-  const [domain, setDomain] = useState<Domain>("cert");
+  const [domain, setDomain] = useState<Domain>(initialDomain ?? "cert");
+  const [prevInitial, setPrevInitial] = useState(initialDomain);
+  if (initialDomain !== undefined && initialDomain !== prevInitial) {
+    setPrevInitial(initialDomain);
+    setDomain(initialDomain);
+  }
 
   const tracks = useMemo<TrackMeta[]>(() => {
     if (bank.tracks && bank.tracks.length > 0) return bank.tracks;

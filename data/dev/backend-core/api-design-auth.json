@@ -1,0 +1,866 @@
+{
+  "round_id": "backend-core-api-design-auth",
+  "trackId": "backend-core",
+  "chapter": {
+    "id": "api-design-auth",
+    "title": "API 설계 · 인증 / 인가",
+    "description": "REST 규약과 상태 코드, 페이징, 멱등성, 세션·JWT·OAuth2, 재시도와 동시성 처리"
+  },
+  "questions": [
+    {
+      "id": "backend-core-api-design-auth-q1",
+      "prompt": "REST 스타일에서 사용자 목록 조회 엔드포인트로 가장 적절한 것은?",
+      "choices": [
+        "GET /getUserList",
+        "POST /user/select",
+        "GET /users",
+        "GET /api?action=userList"
+      ],
+      "correct_index": 3,
+      "difficulty": 0,
+      "section": "REST",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "REST 는 URI 로 자원을 지목하고 행위는 HTTP 메서드로 표현합니다. 동사는 URI 가 아니라 메서드에 담고, 자원 이름은 복수형 명사를 씁니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "동사형 URI",
+                "body": "GET 이 이미 조회를 뜻하므로 get 이 중복됩니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q2",
+      "prompt": "리소스 생성에 성공했을 때 가장 적절한 응답은?",
+      "choices": [
+        "201 Created 와 함께 생성된 자원의 위치를 Location 헤더로 알려 준다",
+        "200 OK 와 함께 응답 본문에 성공 여부만 true 로 담아 클라이언트에 돌려준다",
+        "204 No Content 로 응답하고 본문을 비운다",
+        "302 Found 로 목록 화면으로 리다이렉트한다"
+      ],
+      "correct_index": 1,
+      "difficulty": 0,
+      "section": "REST",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "생성은 201 Created 이고, 클라이언트가 새 자원을 바로 참조할 수 있도록 Location 헤더에 URI 를 담는 것이 규약입니다.",
+            "notes": [
+              {
+                "choiceIndex": 2,
+                "label": "204",
+                "body": "204 는 본문 없는 성공으로, 주로 삭제나 갱신에 씁니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q3",
+      "prompt": "401 Unauthorized 와 403 Forbidden 의 차이는?",
+      "choices": [
+        "401 은 서버 오류, 403 은 클라이언트 오류를 뜻한다",
+        "401 은 자원이 없을 때, 403 은 자원이 잠겨 있을 때 쓴다",
+        "둘은 동일하며 프레임워크에 따라 다르게 쓰인다",
+        "401 은 인증 정보가 없을 때, 403 은 권한이 없을 때 쓴다"
+      ],
+      "correct_index": 4,
+      "difficulty": 0,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "401 은 누구인지 증명하라는 뜻이라 재로그인 유도가 맞고, 403 은 누구인지는 알지만 접근할 수 없다는 뜻이라 재로그인해도 소용이 없습니다.",
+            "notes": [
+              {
+                "choiceIndex": 1,
+                "label": "자원 없음",
+                "body": "자원이 없으면 404 입니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q4",
+      "prompt": "인증(Authentication)과 인가(Authorization)의 구분으로 옳은 것은?",
+      "choices": [
+        "인증은 권한 범위를 정하고, 인가는 신원을 확인한다",
+        "인증은 누구인지 확인하고, 인가는 그 사람이 무엇을 할 수 있는지 판단한다",
+        "인증은 서버가, 인가는 클라이언트가 담당한다",
+        "인증은 로그인 화면에서만 일어나고, 인가는 API 호출에서만 일어난다"
+      ],
+      "correct_index": 2,
+      "difficulty": 0,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "인증이 먼저이고 인가가 그다음입니다. 토큰이 유효한지가 인증, 그 토큰의 주체가 이 자원을 건드려도 되는지가 인가입니다.",
+            "notes": [
+              {
+                "choiceIndex": 2,
+                "label": "클라이언트 담당",
+                "body": "인가 판단을 클라이언트에 맡기면 우회가 가능해 반드시 서버에서 해야 합니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q5",
+      "prompt": "비밀번호를 DB 에 저장하는 올바른 방법은?",
+      "choices": [
+        "사용자마다 다른 솔트를 붙여 bcrypt 같은 느린 해시 함수로 저장한다",
+        "대칭키로 암호화해 저장하고 로그인할 때 복호화해 입력값과 비교한다",
+        "MD5 로 한 번 해시해 저장한다",
+        "평문으로 저장하되 DB 접근 권한을 제한한다"
+      ],
+      "correct_index": 1,
+      "difficulty": 0,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "비밀번호는 복호화할 필요가 없으므로 단방향 해시를 씁니다. 솔트로 레인보우 테이블을 막고, bcrypt·argon2 처럼 의도적으로 느린 알고리즘으로 대량 대입을 어렵게 만듭니다.",
+            "notes": [
+              {
+                "choiceIndex": 1,
+                "label": "대칭키 암호화",
+                "body": "키가 유출되면 전부 복호화되므로 해시보다 위험합니다."
+              },
+              {
+                "choiceIndex": 2,
+                "label": "MD5",
+                "body": "너무 빠르고 충돌이 알려져 비밀번호 저장에 부적합합니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q6",
+      "prompt": "공개 API 에 버전(v1, v2 등)을 두는 가장 큰 이유는?",
+      "choices": [
+        "버전마다 다른 서버에 배포해야 하기 때문",
+        "버전 문자열이 캐시 키로 쓰여 성능이 좋아지기 때문",
+        "기존 클라이언트를 깨뜨리지 않으면서 호환되지 않는 변경을 도입하기 위해",
+        "API 문서 자동 생성 도구가 버전 정보 없이는 동작하지 않기 때문에"
+      ],
+      "correct_index": 3,
+      "difficulty": 0,
+      "section": "REST",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "필드 추가처럼 하위 호환되는 변경은 버전을 올릴 필요가 없지만, 필드 삭제·타입 변경·의미 변경은 기존 클라이언트를 깨뜨립니다. 버전은 그 전환 기간을 벌어 줍니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "서버 분리",
+                "body": "같은 서버에서 여러 버전을 서비스하는 경우가 일반적입니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q7",
+      "prompt": "세션 기반 인증의 기본 동작으로 옳은 것은?",
+      "choices": [
+        "사용자 정보 전체를 쿠키에 담아 보내고 서버는 아무것도 저장하지 않는다",
+        "서버가 세션 데이터를 보관하고 클라이언트에는 세션 식별자만 쿠키로 준다",
+        "매 요청마다 아이디와 비밀번호를 다시 전송해 검증한다",
+        "클라이언트가 세션 데이터를 보관하고 서버가 매번 조회해 간다"
+      ],
+      "correct_index": 2,
+      "difficulty": 0,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "세션 방식은 상태를 서버가 들고 있고 클라이언트는 세션 ID 만 가집니다. 그래서 서버에서 즉시 로그아웃·강제 만료가 쉽지만, 서버 확장 시 세션 공유 전략이 필요합니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "쿠키에 전체 저장",
+                "body": "위변조 위험이 커서 서명·암호화 없이는 쓸 수 없습니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q8",
+      "prompt": "클라이언트가 허용된 호출 한도를 넘겼을 때 반환할 상태 코드는?",
+      "choices": [
+        "409 Conflict",
+        "402 Payment Required",
+        "503 Service Unavailable",
+        "429 Too Many Requests"
+      ],
+      "correct_index": 4,
+      "difficulty": 0,
+      "section": "REST",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "429 와 함께 Retry-After 헤더로 언제 다시 시도하면 되는지 알려 주는 것이 좋은 설계입니다. 503 은 서버 자체가 일시적으로 처리 불가한 상황을 뜻합니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "409",
+                "body": "409 는 자원 상태 충돌에 씁니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q9",
+      "prompt": "PUT 과 PATCH 의 차이로 가장 정확한 것은?",
+      "choices": [
+        "PUT 은 자원 전체를 대체하고, PATCH 는 일부 필드만 변경한다",
+        "PUT 은 생성만, PATCH 는 수정만 담당한다",
+        "PUT 은 요청 본문을 가질 수 없고 PATCH 만 본문을 담아 보낼 수 있다",
+        "PUT 은 비멱등이고 PATCH 는 항상 멱등이다"
+      ],
+      "correct_index": 1,
+      "difficulty": 1,
+      "section": "REST",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "PUT 은 전체 치환이라 보내지 않은 필드는 비워지는 것이 원칙이고 그래서 멱등합니다. PATCH 는 부분 변경이며 연산 형태에 따라 멱등하지 않을 수 있습니다.",
+            "notes": [
+              {
+                "choiceIndex": 3,
+                "label": "멱등성",
+                "body": "설명이 반대입니다. PUT 이 멱등하고 PATCH 는 보장되지 않습니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q10",
+      "prompt": "세션 방식 대비 JWT(자체 포함 토큰)의 트레이드오프로 옳은 것은?",
+      "choices": [
+        "토큰이 암호화되어 있어 본문에 비밀번호를 담아도 안전하다",
+        "서버 저장소가 필요 없어 확장이 쉽지만 토큰 크기가 작아 대역폭도 항상 유리하다",
+        "서버 조회 없이 검증할 수 있어 확장에 유리하지만, 발급된 토큰을 즉시 무효화하기 어렵다",
+        "발급과 폐기 모두 서버 조회가 필요해 세션과 성능이 동일하다"
+      ],
+      "correct_index": 3,
+      "difficulty": 1,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "JWT 는 서명만 검증하면 되므로 상태 없는 확장에 유리합니다. 대신 만료 전까지는 유효하므로 로그아웃·권한 회수를 즉시 반영하려면 별도 블랙리스트나 짧은 만료가 필요합니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "암호화",
+                "body": "표준 JWT 는 서명일 뿐 본문은 누구나 디코딩할 수 있습니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q11",
+      "prompt": "대량 목록에서 offset 페이징 대신 커서 페이징을 쓰는 이유는?",
+      "choices": [
+        "커서 페이징은 임의 페이지 번호로 바로 이동하기가 더 쉽기 때문",
+        "깊은 offset 은 앞 행을 모두 훑어 느리고, 그사이 항목이 밀리기 때문",
+        "offset 방식은 정렬 조건을 함께 지정할 수 없기 때문",
+        "커서 페이징은 전체 개수를 항상 함께 반환해 주기 때문"
+      ],
+      "correct_index": 2,
+      "difficulty": 1,
+      "section": "REST",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "OFFSET 100000 은 앞의 10만 행을 읽고 버립니다. 또 페이지를 넘기는 동안 데이터가 바뀌면 같은 항목이 두 번 보이거나 건너뛰어집니다. 커서는 마지막으로 본 키를 기준으로 이어받아 두 문제를 모두 피합니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "임의 이동",
+                "body": "임의 페이지 점프는 오히려 offset 방식의 장점입니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q12",
+      "prompt": "결제 요청처럼 중복 처리되면 안 되는 API 에서 멱등키(Idempotency-Key)를 쓰는 방식은?",
+      "choices": [
+        "요청 본문을 해시해 값이 같으면 무조건 거부한다",
+        "동일 키가 와도 항상 새로 처리하되 결과만 덮어쓴다",
+        "키를 세션에 저장해 로그인 유지 여부를 판별하는 데 쓴다",
+        "같은 키가 다시 오면 새로 처리하지 않고 첫 결과를 그대로 돌려준다"
+      ],
+      "correct_index": 4,
+      "difficulty": 1,
+      "section": "동시성",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "네트워크 타임아웃 후 클라이언트가 재시도하면 서버는 이미 처리했는지 알 수 없습니다. 멱등키를 유니크 제약과 함께 저장하면 재시도가 와도 결제가 두 번 일어나지 않고 첫 결과를 반환합니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "본문 해시 거부",
+                "body": "정상적인 동일 금액 재구매까지 막게 됩니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q13",
+      "prompt": "리프레시 토큰 회전(rotation)을 적용하는 목적은?",
+      "choices": [
+        "리프레시 토큰의 유효기간을 사실상 무제한으로 늘리려고",
+        "액세스 토큰 없이도 API 를 호출할 수 있게 만들려고",
+        "쓸 때마다 새로 발급하고 옛 토큰을 폐기해 재사용을 탐지하려고",
+        "토큰 크기를 줄여 요청당 전송 비용을 낮추려고"
+      ],
+      "correct_index": 3,
+      "difficulty": 1,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "회전 방식에서는 이미 사용된 옛 리프레시 토큰이 다시 등장하면 탈취 정황으로 보고 해당 계정의 토큰 계열 전체를 무효화합니다. 탈취를 막지는 못해도 빠르게 탐지·차단할 수 있습니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "무제한 연장",
+                "body": "회전은 수명 연장이 아니라 재사용 탐지가 목적입니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q14",
+      "prompt": "OAuth2 Authorization Code + PKCE 흐름의 핵심은?",
+      "choices": [
+        "인가 코드를 교환할 때 code_verifier 를 요구해 코드 탈취를 무력화한다",
+        "액세스 토큰을 리다이렉트 URL 의 쿼리 문자열로 바로 전달해 단계를 줄인다",
+        "클라이언트 시크릿을 앱에 내장해 매 요청마다 검증한다",
+        "사용자 비밀번호를 클라이언트가 대신 받아 인증 서버에 전달한다"
+      ],
+      "correct_index": 1,
+      "difficulty": 1,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "PKCE 는 시크릿을 안전하게 보관할 수 없는 모바일·SPA 를 위한 장치입니다. 인가 코드가 중간에 가로채여도 code_verifier 가 없으면 토큰으로 교환되지 않습니다.",
+            "notes": [
+              {
+                "choiceIndex": 3,
+                "label": "비밀번호 대신 받기",
+                "body": "그건 지금은 권장되지 않는 Resource Owner Password 방식입니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q15",
+      "prompt": "OAuth2 와 OpenID Connect(OIDC)의 관계로 옳은 것은?",
+      "choices": [
+        "OIDC 가 먼저 나왔고 OAuth2 가 이를 대체했다",
+        "둘은 같은 규격의 다른 이름이다",
+        "OAuth2 는 소셜 로그인 전용이고, OIDC 는 API 접근 전용 규격이다",
+        "OAuth2 는 인가 규격이고, OIDC 는 그 위에 ID 토큰으로 인증을 얹은 규격이다"
+      ],
+      "correct_index": 4,
+      "difficulty": 1,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "OAuth2 만으로는 사용자가 누구인지 표준적으로 알 수 없습니다. OIDC 는 서명된 ID 토큰(JWT)과 표준 클레임을 정의해 소셜 로그인 같은 인증 용도를 규격화했습니다.",
+            "notes": [
+              {
+                "choiceIndex": 2,
+                "label": "용도 반대",
+                "body": "인가가 OAuth2, 인증이 OIDC 입니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q16",
+      "prompt": "브라우저 클라이언트에서 액세스 토큰 보관 위치를 고를 때의 트레이드오프로 옳은 것은?",
+      "choices": [
+        "localStorage 는 XSS 로 탈취될 수 없어 가장 안전하다",
+        "httpOnly 쿠키는 XSS 탈취에 강하지만 CSRF 대비가 따로 필요하다",
+        "sessionStorage 는 서버가 직접 읽을 수 있어 검증이 편하다",
+        "쿠키에 담으면 자동 전송되지 않으므로 매번 헤더에 넣어야 한다"
+      ],
+      "correct_index": 2,
+      "difficulty": 1,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "localStorage 는 JS 로 접근 가능해 XSS 한 번에 털립니다. httpOnly + Secure + SameSite 쿠키가 안전하지만, 자동 전송되는 특성 때문에 CSRF 토큰이나 SameSite 설정이 함께 필요합니다.",
+            "notes": [
+              {
+                "choiceIndex": 2,
+                "label": "sessionStorage",
+                "body": "서버는 스토리지를 읽을 수 없습니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q17",
+      "prompt": "고정 윈도우 방식 대신 토큰 버킷으로 요청 제한을 구현할 때의 이점은?",
+      "choices": [
+        "요청 수를 세지 않아도 되어 저장소가 아예 필요 없다",
+        "윈도우 경계에서 순간적으로 두 배의 요청이 몰리는 문제를 해결하지 못한다",
+        "평소엔 여유분을 모아 두었다가 짧은 폭주를 흡수하면서 평균 속도는 지킬 수 있다",
+        "제한을 초과한 요청을 자동으로 큐에 넣어 나중에 처리해 준다"
+      ],
+      "correct_index": 3,
+      "difficulty": 1,
+      "section": "트래픽 제어",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "고정 윈도우는 경계 직전·직후에 요청이 몰리면 한도의 두 배가 통과합니다. 토큰 버킷은 일정 속도로 토큰을 채우고 버킷 크기만큼 버스트를 허용해 평균과 순간 허용치를 분리해 다룹니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "저장소 불필요",
+                "body": "분산 환경에서는 Redis 같은 공유 카운터가 필요합니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q18",
+      "prompt": "API 에러 응답 설계로 가장 바람직한 것은?",
+      "choices": [
+        "적절한 상태 코드와 함께 일관된 형식의 에러 코드·메시지를 준다",
+        "모든 오류를 200 으로 내려보내고 본문의 success 필드로만 구분한다",
+        "스택 트레이스를 그대로 담아 클라이언트가 원인을 파악하게 한다",
+        "상황마다 다른 필드 이름으로 오류를 표현해 정보량을 최대화한다"
+      ],
+      "correct_index": 1,
+      "difficulty": 1,
+      "section": "REST",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "상태 코드는 프록시·모니터링·재시도 로직이 함께 해석하는 신호라 정확해야 합니다. 여기에 고정된 에러 코드 문자열을 더하면 클라이언트가 문구 변경에 영향받지 않고 분기할 수 있습니다.",
+            "notes": [
+              {
+                "choiceIndex": 2,
+                "label": "스택 트레이스",
+                "body": "내부 구조가 노출되어 보안 위험이 됩니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q19",
+      "prompt": "수 분이 걸리는 작업을 요청받는 API 의 설계로 가장 적절한 것은?",
+      "choices": [
+        "요청 스레드에서 끝까지 처리하고 타임아웃을 넉넉히 늘린다",
+        "요청을 받자마자 200 을 주고 결과는 따로 알리지 않는다",
+        "작업을 동기 처리하되 응답을 청크로 조금씩 흘려보낸다",
+        "202 로 작업 ID 를 주고 상태 조회나 웹훅으로 완료를 알린다"
+      ],
+      "correct_index": 4,
+      "difficulty": 1,
+      "section": "REST",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "긴 동기 요청은 게이트웨이 타임아웃과 재시도로 중복 실행을 부릅니다. 접수와 처리를 분리해 202 로 접수 사실만 알리고 폴링이나 콜백으로 결과를 전달하는 편이 안정적입니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "타임아웃 연장",
+                "body": "중간의 LB·프록시 타임아웃까지 모두 늘려야 해 취약합니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q20",
+      "prompt": "프런트엔드에서 이미 입력값을 검증했더라도 서버에서 다시 검증해야 하는 이유는?",
+      "choices": [
+        "서버 검증이 프런트 검증보다 항상 빠르기 때문",
+        "클라이언트는 우회·변조가 가능해 서버에서 다시 확인해야 하기 때문",
+        "브라우저마다 검증 규칙이 달라 결과가 흔들리기 때문",
+        "HTML 폼 검증 기능이 JSON 형식의 요청 본문에는 적용되지 않기 때문"
+      ],
+      "correct_index": 2,
+      "difficulty": 1,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "프런트 검증은 사용자 경험을 위한 것이고, 보안·정합성 보장은 서버의 몫입니다. API 는 브라우저를 거치지 않고도 직접 호출될 수 있습니다.",
+            "notes": [
+              {
+                "choiceIndex": 3,
+                "label": "폼 검증 범위",
+                "body": "부분적으로 맞는 말이지만 근본 이유는 클라이언트를 신뢰할 수 없다는 점입니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q21",
+      "prompt": "두 사용자가 같은 문서를 동시에 수정할 때 나중 저장이 앞선 수정을 덮어쓰는 문제를 막는 방법은?",
+      "choices": [
+        "수정 요청을 순차 큐에 넣어 한 번에 하나씩만 처리한다",
+        "저장하기 전에 조회를 한 번 더 해서 값이 그대로인지 눈으로 비교한다",
+        "버전이나 ETag 를 함께 받아 현재 값과 다르면 409 로 거절한다",
+        "수정 API 를 PUT 대신 POST 로 바꾼다"
+      ],
+      "correct_index": 3,
+      "difficulty": 1,
+      "section": "동시성",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "낙관적 잠금입니다. 클라이언트가 읽은 시점의 버전을 If-Match 나 본문에 담아 보내고, 서버는 그 사이 값이 바뀌었으면 충돌로 처리해 사용자에게 재확인을 요구합니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "순차 큐",
+                "body": "처리량이 무너지고, 덮어쓰기 자체는 여전히 발생합니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q22",
+      "prompt": "외부 API 호출 실패 시 재시도에 지수 백오프와 지터(jitter)를 함께 쓰는 이유는?",
+      "choices": [
+        "간격을 늘려 부하를 낮추고 무작위성으로 재시도 쏠림을 막으려고",
+        "지터가 응답 시간을 측정해 가장 빠른 서버를 고르기 때문",
+        "재시도 횟수를 무제한으로 늘려 결국 성공시키기 위해서",
+        "지수 백오프만으로는 타임아웃을 설정할 수 없기 때문"
+      ],
+      "correct_index": 1,
+      "difficulty": 1,
+      "section": "트래픽 제어",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "장애 직후 모든 클라이언트가 같은 간격으로 재시도하면 회복하려는 서버를 다시 무너뜨립니다(thundering herd). 지터로 재시도 시점을 흩뿌리고, 재시도 횟수 상한과 서킷 브레이커를 함께 두는 것이 정석입니다.",
+            "notes": [
+              {
+                "choiceIndex": 2,
+                "label": "무제한 재시도",
+                "body": "장애를 증폭시키므로 상한이 반드시 필요합니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q23",
+      "prompt": "JWT 를 쓰는 서비스에서 관리자가 특정 사용자를 즉시 차단해야 할 때 현실적인 대응은?",
+      "choices": [
+        "발급된 토큰의 만료 시각을 서버에서 앞당겨 수정한다",
+        "액세스 토큰을 짧게 두고 리프레시 단계를 서버에서 차단한다",
+        "클라이언트에 로그아웃 요청을 보내 토큰을 지우게 한다",
+        "서명 키를 교체해 전체 사용자의 토큰을 매번 폐기한다"
+      ],
+      "correct_index": 2,
+      "difficulty": 2,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "이미 발급된 JWT 는 서버가 손댈 수 없습니다. 그래서 액세스 토큰은 수 분 단위로 짧게 두고 상태를 가진 리프레시 단계에서 차단하며, 즉시성이 더 필요하면 소규모 무효화 목록을 조회하는 절충을 씁니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "만료 시각 수정",
+                "body": "토큰은 클라이언트에 있고 서명되어 있어 서버가 고칠 수 없습니다."
+              },
+              {
+                "choiceIndex": 3,
+                "label": "키 교체",
+                "body": "전체 사용자가 로그아웃되어 개별 차단 수단으로는 과합니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q24",
+      "prompt": "JWT 검증 구현에서 대표적인 취약점은?",
+      "choices": [
+        "만료 시각(exp)을 확인하면 성능이 떨어져 생략하는 것",
+        "페이로드를 Base64 로 디코딩해 사용자 ID 를 읽는 것",
+        "HS256 대신 RS256 을 사용하는 것",
+        "토큰 헤더의 alg 값을 그대로 믿고 검증 알고리즘을 결정하는 것"
+      ],
+      "correct_index": 4,
+      "difficulty": 2,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "공격자가 alg 를 none 이나 HS256 으로 바꿔 보내면, 라이브러리가 그 값을 신뢰할 경우 서명 없이 통과하거나 공개키를 대칭키로 오용하게 됩니다. 서버가 허용할 알고리즘을 코드에 고정해 두는 것이 방어입니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "exp 생략",
+                "body": "생략하면 안 되지만, 성능 때문이라는 전제 자체가 잘못됐습니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q25",
+      "prompt": "세션 방식 서비스를 여러 인스턴스로 늘릴 때 가장 견고한 선택은?",
+      "choices": [
+        "Redis 같은 외부 세션 저장소를 두어 모든 인스턴스가 같은 세션을 공유하게 한다",
+        "로드밸런서의 고정 세션으로 항상 같은 서버로 보내 메모리 세션을 유지한다",
+        "인스턴스 간에 세션을 주기적으로 복제해 동기화한다",
+        "인스턴스마다 세션을 따로 두고 로그인도 각각 하게 한다"
+      ],
+      "correct_index": 1,
+      "difficulty": 2,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "고정 세션은 그 인스턴스가 죽거나 재배포되면 사용자가 로그아웃되고 부하도 고르지 않게 됩니다. 외부 저장소로 세션을 빼면 인스턴스가 상태를 갖지 않아 무중단 배포와 오토스케일이 자유로워집니다.",
+            "notes": [
+              {
+                "choiceIndex": 2,
+                "label": "복제",
+                "body": "인스턴스가 늘수록 복제 비용과 정합성 문제가 커집니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q26",
+      "prompt": "CSRF 가 성립하는 조건과 방어에 대한 설명으로 옳은 것은?",
+      "choices": [
+        "요청 본문이 JSON 이면 CSRF 는 원천적으로 불가능하다",
+        "HTTPS 를 적용하면 CSRF 는 자동으로 차단된다",
+        "브라우저가 자격 증명을 자동 전송할 때 성립하며 SameSite 로 막는다",
+        "서버가 세션을 쓰지 않으면 어떤 인증 방식이든 CSRF 가 발생하지 않는다"
+      ],
+      "correct_index": 3,
+      "difficulty": 2,
+      "section": "인증/인가",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "CSRF 의 핵심은 쿠키가 자동 전송된다는 점입니다. Authorization 헤더에 토큰을 직접 실어 보내는 방식은 자동 전송이 아니라 상대적으로 안전하지만, 토큰을 쿠키에 담는 순간 다시 CSRF 대상이 됩니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "JSON 이면 안전",
+                "body": "Content-Type 을 우회하는 기법이 있어 단독 방어책이 될 수 없습니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q27",
+      "prompt": "외부 시스템의 웹훅을 수신하는 엔드포인트를 설계할 때 반드시 갖춰야 할 것은?",
+      "choices": [
+        "발신자 IP 를 화이트리스트로 잠그면 다른 처리는 필요 없다",
+        "서명으로 발신자를 확인하고 이벤트 ID 기준으로 멱등 처리를 한다",
+        "수신 즉시 200 을 반환하고 로그만 남긴 뒤 실제 처리는 생략한다",
+        "재시도를 막기 위해 실패해도 항상 200 을 반환한다"
+      ],
+      "correct_index": 2,
+      "difficulty": 2,
+      "section": "동시성",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "웹훅은 누구나 호출할 수 있는 공개 엔드포인트이므로 HMAC 서명 검증이 필수입니다. 또 대부분의 공급자가 최소 한 번 전달을 보장하므로 같은 이벤트가 여러 번 올 수 있고, 이벤트 ID 로 중복을 걸러야 합니다.",
+            "notes": [
+              {
+                "choiceIndex": 3,
+                "label": "항상 200",
+                "body": "실패를 숨기면 공급자의 재시도 메커니즘을 쓸 수 없게 됩니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q28",
+      "prompt": "DB 커밋과 외부 시스템 알림을 함께 처리할 때 정합성을 지키는 방법은?",
+      "choices": [
+        "외부 호출을 먼저 하고 성공하면 커밋한다",
+        "커밋과 외부 호출을 같은 트랜잭션 블록에 넣어 함께 롤백되게 한다",
+        "외부 호출 실패 시 무시하고 로그만 남긴다",
+        "이벤트를 같은 트랜잭션으로 아웃박스에 저장하고 별도 워커가 전송한다"
+      ],
+      "correct_index": 4,
+      "difficulty": 2,
+      "section": "동시성",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "외부 HTTP 호출은 롤백되지 않으므로 DB 트랜잭션에 묶을 수 없습니다. 아웃박스 패턴은 이벤트를 같은 트랜잭션으로 DB 에 남겨 원자성을 확보하고, 전송은 재시도 가능한 별도 워커에 맡깁니다.",
+            "notes": [
+              {
+                "choiceIndex": 0,
+                "label": "외부 먼저",
+                "body": "커밋이 실패하면 알림만 나가는 유령 이벤트가 됩니다."
+              },
+              {
+                "choiceIndex": 1,
+                "label": "같은 트랜잭션",
+                "body": "트랜잭션이 외부 호출 시간만큼 길어지고 롤백도 되지 않습니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q29",
+      "prompt": "생성 시각 기준 커서 페이징에서 항목이 중복되거나 누락되는 원인으로 가장 유력한 것은?",
+      "choices": [
+        "정렬 키가 유일하지 않아 같은 시각의 행들이 페이지 경계에서 흔들리기 때문",
+        "페이지 크기를 100 보다 크게 잡아 조회 버퍼 한계를 넘겼기 때문에",
+        "커서 값을 Base64 로 인코딩해 정렬 순서가 깨졌기 때문",
+        "인덱스가 없어 조회할 때마다 정렬 순서가 달라지기 때문"
+      ],
+      "correct_index": 1,
+      "difficulty": 2,
+      "section": "REST",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "created_at 이 동률인 행이 여러 개면 그 사이 경계가 안정적이지 않습니다. (created_at, id) 처럼 유일성을 보장하는 복합 키로 정렬하고 커서에도 두 값을 함께 담아야 합니다.",
+            "notes": [
+              {
+                "choiceIndex": 3,
+                "label": "인덱스",
+                "body": "성능 문제이지 결과 정확성의 원인은 아닙니다."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backend-core-api-design-auth-q30",
+      "prompt": "동일 이메일로 회원가입 요청이 동시에 두 번 들어와 중복 계정이 생기는 문제를 확실히 막는 방법은?",
+      "choices": [
+        "가입 전에 존재 여부를 조회하는 코드를 트랜잭션 안으로 옮긴다",
+        "애플리케이션에서 이메일별로 락 객체를 만들어 동기화한다",
+        "DB 에 이메일 유니크 제약을 두고 위반 예외를 잡아 중복으로 처리한다",
+        "조회와 삽입 사이에 짧은 대기를 넣어 경합 확률을 낮춘다"
+      ],
+      "correct_index": 3,
+      "difficulty": 2,
+      "section": "동시성",
+      "explanations": [
+        {
+          "ai": true,
+          "structured": {
+            "summary": "조회 후 삽입 사이에는 언제나 틈이 있습니다. 여러 인스턴스가 동시에 처리하는 환경에서는 애플리케이션 락도 소용이 없으므로, 최종 방어선은 DB 유니크 제약입니다. 사전 조회는 사용자 경험을 위한 보조 수단으로만 둡니다.",
+            "notes": [
+              {
+                "choiceIndex": 1,
+                "label": "애플리케이션 락",
+                "body": "단일 인스턴스에서만 유효해 스케일아웃하면 깨집니다."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

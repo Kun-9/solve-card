@@ -20,6 +20,27 @@
       "description": "인덱스·트랜잭션·쿼리 튜닝 등 RDBMS 핵심"
     },
     {
+      "id": "network",
+      "domain": "dev",
+      "categoryId": "backend",
+      "title": "네트워크",
+      "description": "TCP/IP·DNS·TLS·HTTP 등 통신의 기반 원리"
+    },
+    {
+      "id": "backend-core",
+      "domain": "dev",
+      "categoryId": "backend",
+      "title": "백엔드 공통",
+      "description": "API 설계·인증/인가·멱등성·에러 처리"
+    },
+    {
+      "id": "infra",
+      "domain": "dev",
+      "categoryId": "backend",
+      "title": "인프라 · 운영",
+      "description": "부하분산·캐시·컨테이너·배포·관측"
+    },
+    {
       "id": "javascript",
       "domain": "dev",
       "categoryId": "frontend",
